@@ -10,6 +10,10 @@ import OpenGL.GL.shaders
 import numpy as np
 import sys
 
+import easy_shaders as es
+import basic_shapes as bs
+import transformations as tr
+import scene_graph as sg
 # A class to store the application control
 class Controller:
     pass
@@ -29,6 +33,18 @@ def on_key(window, key, scancode, action, mods):
 
     else:
         print('Unknown key')
+
+def createBackground(filename):
+    # Load background image
+    gpuStars = es.toGPUShape(bs.createTextureQuad("stars.png"), GL_REPEAT, GL_LINEAR)
+
+    background = sg.SceneGraphNode("background")
+    background.transform = tr.scale(2,2,1)
+    background.childs = [gpuStars]
+
+    return background
+
+
 
 if __name__ == "__main__":
 
@@ -58,6 +74,14 @@ if __name__ == "__main__":
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
+    # A simple shader program with position and texture coordinates as inputs.
+    pipeline = es.SimpleTextureTransformShaderProgram()
+    
+    # Telling OpenGL to use our shader program
+    glUseProgram(pipeline.shaderProgram)
+
+    background = createBackground("stars.png")
+
     while not glfw.window_should_close(window):
         # Using GLFW to check for input events
         glfw.poll_events()
@@ -67,5 +91,7 @@ if __name__ == "__main__":
 
         time = glfw.get_time()
 
+        #Draw background
+        sg.drawSceneGraphNode(background,pipeline,"transform")
         # Once the render is done, buffers are swapped, showing only the complete scene.
         glfw.swap_buffers(window)
