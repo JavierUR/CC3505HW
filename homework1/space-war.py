@@ -36,13 +36,21 @@ def on_key(window, key, scancode, action, mods):
 
 def createBackground(filename):
     # Load background image
-    gpuStars = es.toGPUShape(bs.createTextureQuad("stars.png"), GL_REPEAT, GL_LINEAR)
+    gpuStars = es.toGPUShape(bs.createTextureQuad(filename), GL_REPEAT, GL_LINEAR)
 
+    #Create two background copies to have a scrolling effect
     background = sg.SceneGraphNode("background")
     background.transform = tr.scale(2,2,1)
     background.childs = [gpuStars]
 
-    return background
+    background2 = sg.SceneGraphNode("background2")
+    background2.transform = tr.matmul([tr.scale(2,2,1),tr.translate(0,-1,0)])
+    background2.childs = [gpuStars]
+
+    # Node to control vertical movement of the two backgrounds objects
+    backgroundVertical = sg.SceneGraphNode("backgroundVertical")
+    backgroundVertical.childs = [background, background2]
+    return backgroundVertical
 
 
 
@@ -92,6 +100,7 @@ if __name__ == "__main__":
         time = glfw.get_time()
 
         #Draw background
+        background.transform = tr.translate(0,(-time/2)%2,0)
         sg.drawSceneGraphNode(background,pipeline,"transform")
         # Once the render is done, buffers are swapped, showing only the complete scene.
         glfw.swap_buffers(window)
