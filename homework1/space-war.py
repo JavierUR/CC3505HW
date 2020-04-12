@@ -52,6 +52,7 @@ class GameModel:
         self.playerSpeed = 1.0
 
     def movePlayer(self, dt):
+        # Change speed if moving in two axes
         if (self.controller.right or self.controller.left) and \
                 (self.controller.up or self.controller.down):
             vp = self.playerSpeed / np.sqrt(2)
@@ -59,6 +60,11 @@ class GameModel:
             vp = self.playerSpeed
         self.playerX += dt*vp*(self.controller.right - self.controller.left )
         self.playerY += dt*vp*(self.controller.up - self.controller.down )
+        # Avoid leaving the screen
+        self.playerX = np.clip(self.playerX,-0.7,0.7)
+        self.playerY = np.clip(self.playerY,-0.9,0.8)
+        print(self.playerX)
+        print(self.playerY)
 
     def updateScene(self, time):
         dt = time - self.ltime
@@ -100,8 +106,6 @@ def on_key(window, key, scancode, action, mods):
 
     elif key == glfw.KEY_ESCAPE:
         sys.exit()
-
-
 
 if __name__ == "__main__":
 
