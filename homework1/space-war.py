@@ -25,6 +25,49 @@ class Controller:
     fire = False
     pass
 
+# A class to manage a shot movement
+class Shot(object):
+    speed = 0.9
+    def __init__(self, x, y):
+        self.currentX = x
+        self.currentY = y
+        self.inScreen = True
+
+class PlayerShot(Shot):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+
+    def updatePos(self, dt):
+        self.currentY += dt*self.speed
+        self.inScreen = (self.currentY < 1.0)
+
+class EnemyShot(Shot):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+
+    def updatePos(self, dt):
+        self.currentY -= dt*self.speed
+        self.inScreen = (self.currentY > -1.0)
+
+class Enemy:
+    def __init__(self, x, y, time):
+        self.currentX = x
+        self.currentY = y
+        self.alive = True
+        self.initTime = time
+        self.lastShoot = time
+
+    def spawnShoot(self):
+        return EnemyShot(self.currentX, self.currentY - 0.1)
+
+    def shouldShoot(self, time):
+        if (time - self.lastShoot) >2:
+            self.lastShoot = time
+            return True
+        else:
+            return False
+        
+
 # A class to manage game state
 class GameModel:
     def __init__(self, enemies, screenWidht, screenHeight, controller):
@@ -39,8 +82,8 @@ class GameModel:
         # Load game models
         self.enemyModel = gs.createEnemy()
         self.playerModel = gs.createPlayer()
-        self.playerShotModel = gs.createShot(0.8,0.4,0.0)
-        self.enemyShotModel = gs.createShot(0.4,0.8,0.0)
+        self.playerShotModel = gs.createShot(0.9,0.5,0.0)
+        self.enemyShotModel = gs.createShot(0.4,0.2,1.0)
 
         # Spawn player
         self.playerX = 0.0
@@ -50,6 +93,16 @@ class GameModel:
         self.player.childs = [self.playerModel]
 
         self.playerSpeed = 1.0
+        self.playerLSTime = 0.0
+        self.playerFR = 0.8
+
+        # Objects list
+        self.playerShots = []
+        self.enemyShots = []
+        self.enemies = []
+
+        self.enemies.append(Enemy(0, 0, 0.0))
+        self.enemies.append(Enemy(0.2, 0, 0.5))
 
     def movePlayer(self, dt):
         # Change speed if moving in two axes
@@ -63,8 +116,45 @@ class GameModel:
         # Avoid leaving the screen
         self.playerX = np.clip(self.playerX,-0.7,0.7)
         self.playerY = np.clip(self.playerY,-0.9,0.8)
-        print(self.playerX)
-        print(self.playerY)
+
+    def spawnPlayerShot(self):
+        self.playerShots.append(PlayerShot(self.playerX,self.playerY+0.1))
+
+    def moveShots(self, dt):
+        currentPlayerShoots = []
+        currentEnemyShots = []
+        graphicShots = []
+        for i,pshoot in enumerate(self.playerShots):
+            if pshoot.inScreen:
+                pshoot.updatePos(dt)
+                shot = sg.SceneGraphNode(f"PShoot_{i}")
+                shot.transform = tr.translate(pshoot.currentX,pshoot.currentY,0.0)
+                shot.childs = [self.playerShotModel]
+                graphicShots.append(shot)
+                currentPlayerShoots.append(pshoot)
+        self.playerShots = currentPlayerShoots
+        for i,eshoot in enumerate(self.enemyShots):
+            if eshoot.inScreen:
+                eshoot.updatePos(dt)
+                shot = sg.SceneGraphNode(f"EShoot_{i}")
+                shot.transform = tr.translate(eshoot.currentX,eshoot.currentY,0.0)
+                shot.childs = [self.enemyShotModel]
+                graphicShots.append(shot)
+                currentEnemyShots.append(eshoot)
+        self.enemyShots = currentEnemyShots
+        return graphicShots
+
+    def manageEnemies(self, time, dt):
+        screenEnemies = []
+        for i,enemy in enumerate(self.enemies):
+            # spawn enemy shoot
+            if enemy.shouldShoot(time):
+                self.enemyShots.append(enemy.spawnShoot())
+            screenEnemy = sg.SceneGraphNode(f"enemy_{i}")
+            screenEnemy.transform = tr.translate(enemy.currentX,enemy.currentY,0.0)
+            screenEnemy.childs = [self.enemyModel]
+            screenEnemies.append(screenEnemy)
+        return screenEnemies
 
     def updateScene(self, time):
         dt = time - self.ltime
@@ -72,18 +162,18 @@ class GameModel:
         # Update player position
         self.movePlayer(dt)
         self.player.transform = tr.translate(self.playerX, self.playerY, 0.0)
+        # manage shots
+        if self.controller.fire and (time - self.playerLSTime)>self.playerFR:
+            self.spawnPlayerShot()
+            self.playerLSTime = time
 
+        screenEnemies = self.manageEnemies(time, dt)
 
-        enemy1 = sg.SceneGraphNode("enemy1")
-        enemy1.childs = [self.enemyModel]
+        screenShots = self.moveShots(dt)
 
         
 
-        testShot = sg.SceneGraphNode("testShot")
-        testShot.transform = tr.translate(0.0,-0.2,0.0)
-        testShot.childs = [self.playerShotModel]
-
-        self.gameScene.childs = [self.player, enemy1, testShot]
+        self.gameScene.childs = [self.player]+screenShots+ screenEnemies
         #print(sg.findPosition(player,"Player"))
         return self.gameScene
 
