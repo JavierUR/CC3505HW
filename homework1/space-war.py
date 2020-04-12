@@ -20,7 +20,34 @@ import game_shapes as gs
 class Controller:
     pass
 
+class GameModel:
+    def __init__(self, enemies, screenWidht, screenHeight):
+        # Create game scene
+        self.gameScene = sg.SceneGraphNode("gameScene")
+        self.gameScene.transform = tr.scale(screenHeight/screenWidht,1.0,1.0)
 
+        # Load game models
+        self.enemyModel = gs.createEnemy()
+        self.playerModel = gs.createPlayer()
+        self.playerShotModel = gs.createShot(0.8,0.4,0.0)
+        self.enemyShotModel = gs.createShot(0.4,0.8,0.0)
+
+    def updateScene(self, time):
+        enemy1 = sg.SceneGraphNode("enemy1")
+        enemy1.childs = [self.enemyModel]
+
+        player = sg.SceneGraphNode("Player")
+        player.transform = tr.translate(0.0, -0.75, 0.0)
+        player.childs = [self.playerModel]
+
+        testShot = sg.SceneGraphNode("testShot")
+        testShot.transform = tr.translate(0.0,-0.2,0.0)
+        testShot.childs = [self.playerShotModel]
+
+        self.gameScene.childs = [player, enemy1, testShot]
+        return self.gameScene
+
+    
 controller = Controller()
 
 def on_key(window, key, scancode, action, mods):
@@ -72,28 +99,10 @@ if __name__ == "__main__":
     # A simple shader program with position and texture coordinates as inputs.
     pipelineColor = es.SimpleTransformShaderProgram()
     
-
     background = gs.createBackground("stars.png")
 
-    #test enemy and player
-    enemyModel = gs.createEnemy()
-    playerModel = gs.createPlayer()
-    shotModel = gs.createShot(0.8,0.4,0.0)
-
-    enemy1 = sg.SceneGraphNode("enemy1")
-    enemy1.childs = [enemyModel]
-
-    player = sg.SceneGraphNode("Player")
-    player.transform = tr.translate(0.0, -0.75, 0.0)
-    player.childs = [playerModel]
-
-    testShot = sg.SceneGraphNode("testShot")
-    testShot.transform = tr.translate(0.0,-0.2,0.0)
-    testShot.childs = [shotModel]
-
-    gameScene = sg.SceneGraphNode("gameScene")
-    gameScene.transform = tr.scale(height/width,1.0,1.0)
-    gameScene.childs = [player, enemy1, testShot]
+    gameModel = GameModel(10, width, height)
+    
     while not glfw.window_should_close(window):
         # Using GLFW to check for input events
         glfw.poll_events()
@@ -112,6 +121,7 @@ if __name__ == "__main__":
         #Draw ships
         # Telling OpenGL to use our shader program
         glUseProgram(pipelineColor.shaderProgram)
+        gameScene = gameModel.updateScene(time)
         sg.drawSceneGraphNode(gameScene, pipelineColor, "transform")
 
         # Once the render is done, buffers are swapped, showing only the complete scene.
