@@ -18,10 +18,20 @@ import scene_graph as sg
 import game_shapes as gs
 # A class to store the application control
 class Controller:
+    right = False
+    left = False
+    up = False
+    down = False
+    fire = False
     pass
 
+# A class to manage game state
 class GameModel:
-    def __init__(self, enemies, screenWidht, screenHeight):
+    def __init__(self, enemies, screenWidht, screenHeight, controller):
+        # Start clock
+        self.ltime = 0.0
+        # reference to the game controller
+        self.controller = controller
         # Create game scene
         self.gameScene = sg.SceneGraphNode("gameScene")
         self.gameScene.transform = tr.scale(screenHeight/screenWidht,1.0,1.0)
@@ -32,36 +42,64 @@ class GameModel:
         self.playerShotModel = gs.createShot(0.8,0.4,0.0)
         self.enemyShotModel = gs.createShot(0.4,0.8,0.0)
 
+        # Spawn player
+        self.playerX = 0.0
+        self.playerY = -0.75
+        self.player = sg.SceneGraphNode("Player")
+        self.player.transform = tr.translate(self.playerX, self.playerY, 0.0)
+        self.player.childs = [self.playerModel]
+
+        self.playerSpeed = 1.0
+
+    def movePlayer(self, dt):
+        if (self.controller.right or self.controller.left) and \
+                (self.controller.up or self.controller.down):
+            vp = self.playerSpeed / np.sqrt(2)
+        else:
+            vp = self.playerSpeed
+        self.playerX += dt*vp*(self.controller.right - self.controller.left )
+        self.playerY += dt*vp*(self.controller.up - self.controller.down )
+
     def updateScene(self, time):
+        dt = time - self.ltime
+        self.ltime = time
+        # Update player position
+        self.movePlayer(dt)
+        self.player.transform = tr.translate(self.playerX, self.playerY, 0.0)
+
+
         enemy1 = sg.SceneGraphNode("enemy1")
         enemy1.childs = [self.enemyModel]
 
-        player = sg.SceneGraphNode("Player")
-        player.transform = tr.translate(0.0, -0.75, 0.0)
-        player.childs = [self.playerModel]
+        
 
         testShot = sg.SceneGraphNode("testShot")
         testShot.transform = tr.translate(0.0,-0.2,0.0)
         testShot.childs = [self.playerShotModel]
 
-        self.gameScene.childs = [player, enemy1, testShot]
+        self.gameScene.childs = [self.player, enemy1, testShot]
+        #print(sg.findPosition(player,"Player"))
         return self.gameScene
 
     
 controller = Controller()
 
 def on_key(window, key, scancode, action, mods):
-    #Function to react to key press
-    if action != glfw.PRESS:
-        return
-    
     global controller # Declares that we are going to use the global object controller inside this function.
+    #Function to react to key press
+    if key == glfw.KEY_D:
+        controller.right = (action == glfw.PRESS or action == glfw.REPEAT)
+    elif key == glfw.KEY_A:
+        controller.left = (action == glfw.PRESS or action == glfw.REPEAT)
+    elif key == glfw.KEY_W:
+        controller.up = (action == glfw.PRESS or action == glfw.REPEAT)
+    elif key == glfw.KEY_S:
+        controller.down = (action == glfw.PRESS or action == glfw.REPEAT)
+    elif key == glfw.KEY_SPACE:
+        controller.fire = (action == glfw.PRESS or action == glfw.REPEAT)
 
-    if key == glfw.KEY_ESCAPE:
+    elif key == glfw.KEY_ESCAPE:
         sys.exit()
-
-    else:
-        print('Unknown key')
 
 
 
@@ -101,7 +139,7 @@ if __name__ == "__main__":
     
     background = gs.createBackground("stars.png")
 
-    gameModel = GameModel(10, width, height)
+    gameModel = GameModel(10, width, height, controller)
     
     while not glfw.window_should_close(window):
         # Using GLFW to check for input events
@@ -113,7 +151,7 @@ if __name__ == "__main__":
         time = glfw.get_time()
 
         #Draw background
-        # Telling OpenGL to use our shader program
+        # Telling OpenGL to use our shader program for textures
         glUseProgram(pipelineTexture.shaderProgram)
         background.transform = tr.translate(0,(-time/2)%2,0)
         sg.drawSceneGraphNode(background,pipelineTexture,"transform")
