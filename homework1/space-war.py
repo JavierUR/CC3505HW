@@ -14,6 +14,8 @@ import easy_shaders as es
 import basic_shapes as bs
 import transformations as tr
 import scene_graph as sg
+
+import game_shapes as gs
 # A class to store the application control
 class Controller:
     pass
@@ -33,24 +35,6 @@ def on_key(window, key, scancode, action, mods):
 
     else:
         print('Unknown key')
-
-def createBackground(filename):
-    # Load background image
-    gpuStars = es.toGPUShape(bs.createTextureQuad(filename), GL_REPEAT, GL_LINEAR)
-
-    #Create two background copies to have a scrolling effect
-    background = sg.SceneGraphNode("background")
-    background.transform = tr.scale(2,2,1)
-    background.childs = [gpuStars]
-
-    background2 = sg.SceneGraphNode("background2")
-    background2.transform = tr.matmul([tr.scale(2,2,1),tr.translate(0,-1,0)])
-    background2.childs = [gpuStars]
-
-    # Node to control vertical movement of the two backgrounds objects
-    backgroundVertical = sg.SceneGraphNode("backgroundVertical")
-    backgroundVertical.childs = [background, background2]
-    return backgroundVertical
 
 
 
@@ -88,7 +72,7 @@ if __name__ == "__main__":
     # Telling OpenGL to use our shader program
     glUseProgram(pipeline.shaderProgram)
 
-    background = createBackground("stars.png")
+    background = gs.createBackground("stars.png")
 
     while not glfw.window_should_close(window):
         # Using GLFW to check for input events
