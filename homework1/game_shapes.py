@@ -62,7 +62,8 @@ def createEnemy():
     enemyWing2.transform = tr.matmul([tr.translate(-0.5,0,0),tr.scale(-1, 1, 1)])
     enemyWing2.childs = [gpuWing]
 
-    enemy = sg.SceneGraphNode("enemy")
+    enemy = sg.SceneGraphNode("enemyModel")
+    enemy.transform = tr.uniformScale(0.08)
     enemy.childs = [enemyBody, enemyWing1, enemyWing2]
 
     return enemy
@@ -130,7 +131,17 @@ def createPlayer():
     playerDownWing = sg.SceneGraphNode("wing2")
     playerDownWing.childs = [gpuWingDown]
 
-    enemy = sg.SceneGraphNode("player")
-    enemy.childs = [playerUpWing, playerDownWing, playerBody]
+    player = sg.SceneGraphNode("playerModel")
+    player.transform = tr.uniformScale(0.1)
+    player.childs = [playerUpWing, playerDownWing, playerBody]
 
-    return enemy
+    return player
+
+def createShot(r,g,b):
+    gpuShot = es.toGPUShape(bs.createColorQuad(r,g,b))
+
+    shot = sg.SceneGraphNode("shot")
+    shot.transform = tr.uniformScale(0.02)
+    shot.childs = [gpuShot]
+
+    return shot

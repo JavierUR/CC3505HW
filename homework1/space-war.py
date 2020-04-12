@@ -75,9 +75,25 @@ if __name__ == "__main__":
 
     background = gs.createBackground("stars.png")
 
-    #test enemy
-    enemy1 = gs.createEnemy()
-    player = gs.createPlayer()
+    #test enemy and player
+    enemyModel = gs.createEnemy()
+    playerModel = gs.createPlayer()
+    shotModel = gs.createShot(0.8,0.4,0.0)
+
+    enemy1 = sg.SceneGraphNode("enemy1")
+    enemy1.childs = [enemyModel]
+
+    player = sg.SceneGraphNode("Player")
+    player.transform = tr.translate(0.0, -0.75, 0.0)
+    player.childs = [playerModel]
+
+    testShot = sg.SceneGraphNode("testShot")
+    testShot.transform = tr.translate(0.0,-0.2,0.0)
+    testShot.childs = [shotModel]
+
+    gameScene = sg.SceneGraphNode("gameScene")
+    gameScene.transform = tr.scale(height/width,1.0,1.0)
+    gameScene.childs = [player, enemy1, testShot]
     while not glfw.window_should_close(window):
         # Using GLFW to check for input events
         glfw.poll_events()
@@ -96,10 +112,7 @@ if __name__ == "__main__":
         #Draw ships
         # Telling OpenGL to use our shader program
         glUseProgram(pipelineColor.shaderProgram)
-        enemy1.transform = tr.scale(0.08/0.75,0.08,1)
-        sg.drawSceneGraphNode(enemy1, pipelineColor, "transform")
+        sg.drawSceneGraphNode(gameScene, pipelineColor, "transform")
 
-        player.transform = tr.matmul([tr.translate(0.0,-0.75,0), tr.scale(0.2/0.75,0.2,1) ])
-        sg.drawSceneGraphNode(player, pipelineColor, "transform")
         # Once the render is done, buffers are swapped, showing only the complete scene.
         glfw.swap_buffers(window)
