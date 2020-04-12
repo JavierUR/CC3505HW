@@ -67,13 +67,17 @@ if __name__ == "__main__":
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
     # A simple shader program with position and texture coordinates as inputs.
-    pipeline = es.SimpleTextureTransformShaderProgram()
+    pipelineTexture = es.SimpleTextureTransformShaderProgram()
+
+    # A simple shader program with position and texture coordinates as inputs.
+    pipelineColor = es.SimpleTransformShaderProgram()
     
-    # Telling OpenGL to use our shader program
-    glUseProgram(pipeline.shaderProgram)
 
     background = gs.createBackground("stars.png")
 
+    #test enemy
+    enemy1 = gs.createEnemy()
+    player = gs.createPlayer()
     while not glfw.window_should_close(window):
         # Using GLFW to check for input events
         glfw.poll_events()
@@ -84,7 +88,18 @@ if __name__ == "__main__":
         time = glfw.get_time()
 
         #Draw background
+        # Telling OpenGL to use our shader program
+        glUseProgram(pipelineTexture.shaderProgram)
         background.transform = tr.translate(0,(-time/2)%2,0)
-        sg.drawSceneGraphNode(background,pipeline,"transform")
+        sg.drawSceneGraphNode(background,pipelineTexture,"transform")
+
+        #Draw ships
+        # Telling OpenGL to use our shader program
+        glUseProgram(pipelineColor.shaderProgram)
+        enemy1.transform = tr.scale(0.08/0.75,0.08,1)
+        sg.drawSceneGraphNode(enemy1, pipelineColor, "transform")
+
+        player.transform = tr.matmul([tr.translate(0.0,-0.75,0), tr.scale(0.2/0.75,0.2,1) ])
+        sg.drawSceneGraphNode(player, pipelineColor, "transform")
         # Once the render is done, buffers are swapped, showing only the complete scene.
         glfw.swap_buffers(window)
