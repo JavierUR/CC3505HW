@@ -11,13 +11,13 @@ import transformations as tr
 import basic_shapes as bs
 import scene_graph as sg
 
-def createBackground(filename):
+def create_background(filename):
     # Load background image
     gpuStars = es.toGPUShape(bs.createTextureQuad(filename), GL_REPEAT, GL_LINEAR)
 
     #Create two background copies to have a scrolling effect
     background = sg.SceneGraphNode("background")
-    background.transform = tr.scale(2,2,1)
+    background.transform = tr.scale(2, 2, 1)
     background.childs = [gpuStars]
 
     background2 = sg.SceneGraphNode("background2")
@@ -29,7 +29,21 @@ def createBackground(filename):
     backgroundVertical.childs = [background, background2]
     return backgroundVertical
 
-def enemyWingShape(r,g,b):
+def create_gameover_screen(filename):
+    # Load background image
+    gpuGameOver = es.toGPUShape(bs.createTextureQuad(filename), GL_REPEAT, GL_LINEAR)
+
+    #Create two background copies to have a scrolling effect
+    gameover = sg.SceneGraphNode("gameover")
+    gameover.transform = tr.scale(2, 2, 1)
+    gameover.childs = [gpuGameOver]
+
+    # Node to control vertical movement of the two gameovers objects
+    gameoverVertical = sg.SceneGraphNode("gameoverVertical")
+    gameoverVertical.childs = [gameover]
+    return gameoverVertical
+
+def enemy_wing_shape(r,g,b):
     # Defining locations and colors for each vertex of the shape    
     vertices = [
     #   positions        colors
@@ -44,23 +58,23 @@ def enemyWingShape(r,g,b):
 
     return bs.Shape(vertices, indices)
 
-def createEnemy():
+def create_enemy():
     # Generate enemy model
     # Body
-    gpuBody = es.toGPUShape(bs.createColorQuad(0.5,0,0.38))
+    gpuBody = es.toGPUShape(bs.createColorQuad(0.5, 0, 0.38))
 
     # Wing
-    gpuWing = es.toGPUShape(enemyWingShape(0.0,0.38,0.5))
+    gpuWing = es.toGPUShape(enemy_wing_shape(0.0, 0.38, 0.5))
 
     enemyBody = sg.SceneGraphNode("body")
     enemyBody.childs = [gpuBody]
 
     enemyWing1 = sg.SceneGraphNode("wing1")
-    enemyWing1.transform = tr.translate(0.5,0,0)
+    enemyWing1.transform = tr.translate(0.5, 0, 0)
     enemyWing1.childs = [gpuWing]
 
     enemyWing2 = sg.SceneGraphNode("wing2")
-    enemyWing2.transform = tr.matmul([tr.translate(-0.5,0,0),tr.scale(-1, 1, 1)])
+    enemyWing2.transform = tr.matmul([tr.translate(-0.5, 0, 0),tr.scale(-1, 1, 1)])
     enemyWing2.childs = [gpuWing]
 
     enemy = sg.SceneGraphNode("enemyModel")
@@ -69,7 +83,7 @@ def createEnemy():
 
     return enemy
 
-def playerBodyShape(r,g,b):
+def player_body_shape(r,g,b):
     # Defining locations and colors for each vertex of the shape    
     vertices = [
     #   positions        colors
@@ -84,7 +98,7 @@ def playerBodyShape(r,g,b):
 
     return bs.Shape(vertices, indices)
 
-def playerLowerWingShape(r,g,b):
+def player_lower_wing_shape(r,g,b):
     # Defining locations and colors for each vertex of the shape    
     vertices = [
     #   positions        colors
@@ -99,7 +113,7 @@ def playerLowerWingShape(r,g,b):
 
     return bs.Shape(vertices, indices)
 
-def playerUpperWingShape(r,g,b):
+def player_upper_wing_shape(r,g,b):
     # Defining locations and colors for each vertex of the shape    
     vertices = [
     #   positions        colors
@@ -113,16 +127,17 @@ def playerUpperWingShape(r,g,b):
          0, 1, 2]
 
     return bs.Shape(vertices, indices)
-def createPlayer():
+
+def create_player():
     # Generate player model
     # Body
-    gpuBody = es.toGPUShape(playerBodyShape(0.8,0,0.07))
+    gpuBody = es.toGPUShape(player_body_shape(0.8,0,0.07))
 
     # WingUp
-    gpuWingUp = es.toGPUShape(playerUpperWingShape(0.427,0.447,0.458))
+    gpuWingUp = es.toGPUShape(player_upper_wing_shape(0.427,0.447,0.458))
 
     # WingDown
-    gpuWingDown = es.toGPUShape(playerLowerWingShape(0.427,0.447,0.458))
+    gpuWingDown = es.toGPUShape(player_lower_wing_shape(0.427,0.447,0.458))
 
     playerBody = sg.SceneGraphNode("body")
     playerBody.childs = [gpuBody]
@@ -139,7 +154,7 @@ def createPlayer():
 
     return player
 
-def createShot(r,g,b):
+def create_shot(r,g,b):
     gpuShot = es.toGPUShape(bs.createColorQuad(r,g,b))
 
     shot = sg.SceneGraphNode("shot")
@@ -148,7 +163,7 @@ def createShot(r,g,b):
 
     return shot
 
-def createExplosion():
+def create_explosion():
     # Ship explosion model
     r,g,b = (0.95,0.4,0.0)
     # Defining locations and colors for each vertex of the shape    

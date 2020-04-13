@@ -81,11 +81,11 @@ class GameModel:
         self.gameScene.transform = tr.scale(screenHeight/screenWidht,1.0,1.0)
 
         # Load game models
-        self.enemyModel = gs.createEnemy()
-        self.playerModel = gs.createPlayer()
-        self.playerShotModel = gs.createShot(0.9,0.5,0.0)
-        self.enemyShotModel = gs.createShot(0.4,0.2,1.0)
-        self.explosionmodel = gs.createExplosion()
+        self.enemyModel = gs.create_enemy()
+        self.playerModel = gs.create_player()
+        self.playerShotModel = gs.create_shot(0.9,0.5,0.0)
+        self.enemyShotModel = gs.create_shot(0.4,0.2,1.0)
+        self.explosionmodel = gs.create_explosion()
 
         # Spawn player
         self.playerX = 0.0
@@ -176,7 +176,7 @@ class GameModel:
             self.lastEnemyTimer = time
             self.waitSpawn = True
         #Spawn new enemy wave
-        elif self.remainingEnemies>0 and (time-self.lastEnemyTimer) > 1.0:
+        elif self.remainingEnemies > 0 and (time-self.lastEnemyTimer) > 1.0:
             self.wave+=1
             toSpawn = min(np.clip(self.wave, 0, 5),self.remainingEnemies)
             x = (toSpawn-1)*-0.125
