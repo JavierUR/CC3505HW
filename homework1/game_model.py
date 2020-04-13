@@ -44,7 +44,7 @@ class Enemy:
         self.initTime = time
         self.lastShoot = time
 
-    def spawnShoot(self):
+    def spawnShot(self):
         return EnemyShot(self.currentX, self.currentY - 0.1)
 
     def shouldShoot(self, time):
@@ -95,6 +95,8 @@ class GameModel:
         self.gameover = False
         self.remainingEnemies = nEnemies
         self.wave = 1
+        self.lastEnemyTimer = 0.0 #time of last enemy death
+        self.waitSpawn = False
 
     def movePlayer(self, dt):
         # Change speed if moving in two axes
@@ -126,11 +128,11 @@ class GameModel:
                 self.playerX-0.08, self.playerY+0.05,
                 self.playerX+0.08, self.playerY-0.05):
             self.gameover = True
-            print("DEAD")
             return True
         return False
 
     def moveShots(self, dt):
+        # Function to move shots on the game and check hits
         currentPlayerShots = []
         currentEnemyShots = []
         graphicShots = []
@@ -157,20 +159,27 @@ class GameModel:
         return graphicShots
 
     def spawnEnemies(self, time):
-        if len(self.enemies) == 0 and self.remainingEnemies>0:
+        #Wait 1 second before new enemies
+        if not self.waitSpawn:
+            self.lastEnemyTimer = time
+            self.waitSpawn = True
+        #Spawn new enemy wave
+        elif self.remainingEnemies>0 and (time-self.lastEnemyTimer) > 1.0:
             self.enemies.append(Enemy(0.0,0.9,time))
             self.wave+=1
             self.remainingEnemies-=1
+            self.waitSpawn = False
 
     def manageEnemies(self, time, dt):
-        self.spawnEnemies(time)
+        if len(self.enemies) == 0:
+            self.spawnEnemies(time)
         screenEnemies = []
         currentEnemies = []
         for i,enemy in enumerate(self.enemies):
             if enemy.alive:
                 # spawn enemy shoot
                 if enemy.shouldShoot(time):
-                    self.enemyShots.append(enemy.spawnShoot())
+                    self.enemyShots.append(enemy.spawnShot())
                 screenEnemy = sg.SceneGraphNode(f"enemy_{i}")
                 screenEnemy.transform = tr.translate(enemy.currentX,enemy.currentY,0.0)
                 screenEnemy.childs = [self.enemyModel]
