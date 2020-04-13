@@ -96,7 +96,7 @@ if __name__ == "__main__":
         #Draw background
         # Telling OpenGL to use our shader program for textures
         glUseProgram(pipelineTexture.shaderProgram)
-        background.transform = tr.translate(0,(-time/2)%2,0)
+        background.transform = tr.translate(0,(-time/4)%2,0)
         sg.drawSceneGraphNode(background,pipelineTexture,"transform")
 
         #Draw ships
