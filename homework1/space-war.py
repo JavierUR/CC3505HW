@@ -1,7 +1,7 @@
 # coding=utf-8
 """
 Javier Urrutia, CC3501, 2020-1
-Space Wars game, designe with the 
+Space Wars game, designed with the 
 model-view-controller design pattern
 """
 import glfw

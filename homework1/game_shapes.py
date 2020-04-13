@@ -45,6 +45,7 @@ def enemyWingShape(r,g,b):
     return bs.Shape(vertices, indices)
 
 def createEnemy():
+    # Generate enemy model
     # Body
     gpuBody = es.toGPUShape(bs.createColorQuad(0.5,0,0.38))
 
@@ -113,6 +114,7 @@ def playerUpperWingShape(r,g,b):
 
     return bs.Shape(vertices, indices)
 def createPlayer():
+    # Generate player model
     # Body
     gpuBody = es.toGPUShape(playerBodyShape(0.8,0,0.07))
 
@@ -147,6 +149,7 @@ def createShot(r,g,b):
     return shot
 
 def createExplosion():
+    # Ship explosion model
     r,g,b = (0.95,0.4,0.0)
     # Defining locations and colors for each vertex of the shape    
     vertices = [

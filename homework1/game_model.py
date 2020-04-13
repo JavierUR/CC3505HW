@@ -1,8 +1,7 @@
 # coding=utf-8
 """
 Javier Urrutia, CC3501, 2020-1
-Space Wars game, designe with the 
-model of the game
+Model of the game
 """
 import numpy as np
 
@@ -10,6 +9,7 @@ import transformations as tr
 import scene_graph as sg
 
 import game_shapes as gs
+import game_utils as gu
 
 #Define ship states
 S_ALIVE = 0
@@ -68,10 +68,6 @@ class Enemy:
                 self.deathTime = time
             elif (time-self.deathTime) > 0.2:
                 self.state = S_DEAD
-        
-def checkHitbox(x,y, x1,y1, x2,y2):
-    # Determine if point is inside hitbox
-    return (x > x1 and x < x2) and (y < y1 and y > y2)
 
 # A class to manage game state
 class GameModel:
@@ -132,7 +128,7 @@ class GameModel:
 
     def checkEnemyHit(self, shot):
         for enemy in self.enemies:
-            if enemy.state == S_ALIVE and checkHitbox(shot.currentX, shot.currentY, 
+            if enemy.state == S_ALIVE and gu.checkHitbox(shot.currentX, shot.currentY, 
                                             enemy.currentX-0.08, enemy.currentY+0.05,
                                             enemy.currentX+0.08, enemy.currentY-0.05):
                 enemy.state = S_HIT
@@ -140,7 +136,7 @@ class GameModel:
         return False
 
     def checkPlayerHit(self, shot):
-        if checkHitbox(shot.currentX, shot.currentY, 
+        if gu.checkHitbox(shot.currentX, shot.currentY, 
                 self.playerX-0.08, self.playerY+0.05,
                 self.playerX+0.08, self.playerY-0.05):
             self.gameover = True
@@ -185,7 +181,7 @@ class GameModel:
             toSpawn = min(np.clip(self.wave, 0, 5),self.remainingEnemies)
             x = (toSpawn-1)*-0.125
             for i in range(toSpawn):
-                self.enemies.append(Enemy(x,0.9,time+np.random.random()))
+                self.enemies.append(Enemy(x, 0.9, time + np.random.random()))
                 self.remainingEnemies-=1
                 x+=0.25
             self.waitSpawn = False
