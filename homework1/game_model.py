@@ -10,6 +10,7 @@ import transformations as tr
 import scene_graph as sg
 
 import game_shapes as gs
+
 # A class to manage a shot movement
 class Shot(object):
     speed = 0.9
@@ -59,7 +60,7 @@ def checkHitbox(x,y, x1,y1, x2,y2):
 
 # A class to manage game state
 class GameModel:
-    def __init__(self, enemies, screenWidht, screenHeight, controller):
+    def __init__(self, nEnemies, screenWidht, screenHeight, controller):
         # Start clock
         self.ltime = 0.0
         # reference to the game controller
@@ -92,9 +93,8 @@ class GameModel:
 
         # Game status
         self.gameover = False
-
-        self.enemies.append(Enemy(0, 0, 0.0))
-        self.enemies.append(Enemy(0.2, 0, 0.5))
+        self.remainingEnemies = nEnemies
+        self.wave = 1
 
     def movePlayer(self, dt):
         # Change speed if moving in two axes
@@ -156,8 +156,16 @@ class GameModel:
         self.enemyShots = currentEnemyShots
         return graphicShots
 
+    def spawnEnemies(self, time):
+        if len(self.enemies) == 0 and self.remainingEnemies>0:
+            self.enemies.append(Enemy(0.0,0.9,time))
+            self.wave+=1
+            self.remainingEnemies-=1
+
     def manageEnemies(self, time, dt):
+        self.spawnEnemies(time)
         screenEnemies = []
+        currentEnemies = []
         for i,enemy in enumerate(self.enemies):
             if enemy.alive:
                 # spawn enemy shoot
@@ -167,6 +175,8 @@ class GameModel:
                 screenEnemy.transform = tr.translate(enemy.currentX,enemy.currentY,0.0)
                 screenEnemy.childs = [self.enemyModel]
                 screenEnemies.append(screenEnemy)
+                currentEnemies.append(enemy)
+        self.enemies = currentEnemies
         return screenEnemies
 
     def updateScene(self, time):
