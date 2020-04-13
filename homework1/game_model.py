@@ -34,6 +34,7 @@ class EnemyShot(Shot):
         self.currentY -= dt*self.speed
         self.inScreen = (self.currentY > -1.0)
 
+# A class to manage each enemy
 class Enemy:
     def __init__(self, x, y, time):
         self.currentX = x
@@ -182,9 +183,6 @@ class GameModel:
         screenShots = self.moveShots(dt)
 
         screenEnemies = self.manageEnemies(time, dt)
-
-
-        
 
         self.gameScene.childs = [self.player]+screenShots+ screenEnemies
         #print(sg.findPosition(player,"Player"))
