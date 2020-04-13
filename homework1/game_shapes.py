@@ -145,3 +145,29 @@ def createShot(r,g,b):
     shot.childs = [gpuShot]
 
     return shot
+
+def createExplosion():
+    r,g,b = (0.95,0.4,0.0)
+    # Defining locations and colors for each vertex of the shape    
+    vertices = [
+    #   positions        colors
+        -0.5, -0.5, 0.0,  r, g, b,
+         0.5, -0.5, 0.0,  r, g, b,
+         0.0,  0.5, 0.0,  r, g, b,
+         0.0, -0.75, 0.0,  r, g, b,
+         0.5, 0.25, 0.0,  r, g, b,
+        -0.5, 0.25, 0.0,  r, g, b]
+
+    # Defining connections among vertices
+    # We have a triangle every 3 indices specified
+    indices = [
+         0, 1, 2,
+         3, 4, 5]
+
+    gpuExplosion = es.toGPUShape(bs.Shape(vertices, indices))
+
+    explosion =sg.SceneGraphNode("explosionModel")
+    explosion.transform = tr.uniformScale(0.15)
+    explosion.childs = [gpuExplosion]
+
+    return explosion

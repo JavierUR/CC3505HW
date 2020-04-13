@@ -11,6 +11,11 @@ import scene_graph as sg
 
 import game_shapes as gs
 
+#Define ship states
+S_ALIVE = 0
+S_HIT   = 1
+S_DEAD  = 2
+
 # A class to manage a shot movement
 class Shot(object):
     speed = 0.9
@@ -40,19 +45,29 @@ class Enemy:
     def __init__(self, x, y, time):
         self.currentX = x
         self.currentY = y
-        self.alive = True
+        self.state = S_ALIVE
         self.initTime = time
-        self.lastShoot = time
+        self.lastShot = time
+        self.deathTime = None
 
     def spawnShot(self):
         return EnemyShot(self.currentX, self.currentY - 0.1)
 
     def shouldShoot(self, time):
-        if (time - self.lastShoot) >2:
-            self.lastShoot = time
+        if (time - self.lastShot) >2:
+            self.lastShot = time
             return True
         else:
             return False
+
+    def update(self,time):
+        if self.state == S_ALIVE:
+            return
+        elif self.state == S_HIT:
+            if self.deathTime is None:
+                self.deathTime = time
+            elif (time-self.deathTime) > 0.2:
+                self.state = S_DEAD
         
 def checkHitbox(x,y, x1,y1, x2,y2):
     # Determine if point is inside hitbox
@@ -74,6 +89,7 @@ class GameModel:
         self.playerModel = gs.createPlayer()
         self.playerShotModel = gs.createShot(0.9,0.5,0.0)
         self.enemyShotModel = gs.createShot(0.4,0.2,1.0)
+        self.explosionmodel = gs.createExplosion()
 
         # Spawn player
         self.playerX = 0.0
@@ -116,10 +132,10 @@ class GameModel:
 
     def checkEnemyHit(self, shot):
         for enemy in self.enemies:
-            if checkHitbox(shot.currentX, shot.currentY, 
-                    enemy.currentX-0.08, enemy.currentY+0.05,
-                    enemy.currentX+0.08, enemy.currentY-0.05):
-                enemy.alive = False
+            if enemy.state == S_ALIVE and checkHitbox(shot.currentX, shot.currentY, 
+                                            enemy.currentX-0.08, enemy.currentY+0.05,
+                                            enemy.currentX+0.08, enemy.currentY-0.05):
+                enemy.state = S_HIT
                 return True
         return False
 
@@ -176,13 +192,20 @@ class GameModel:
         screenEnemies = []
         currentEnemies = []
         for i,enemy in enumerate(self.enemies):
-            if enemy.alive:
+            enemy.update(time)
+            if enemy.state==S_ALIVE:
                 # spawn enemy shoot
                 if enemy.shouldShoot(time):
                     self.enemyShots.append(enemy.spawnShot())
                 screenEnemy = sg.SceneGraphNode(f"enemy_{i}")
                 screenEnemy.transform = tr.translate(enemy.currentX,enemy.currentY,0.0)
                 screenEnemy.childs = [self.enemyModel]
+                screenEnemies.append(screenEnemy)
+                currentEnemies.append(enemy)
+            elif enemy.state==S_HIT:
+                screenEnemy = sg.SceneGraphNode(f"dead_enemy_{i}")
+                screenEnemy.transform = tr.translate(enemy.currentX,enemy.currentY,0.0)
+                screenEnemy.childs = [self.explosionmodel]
                 screenEnemies.append(screenEnemy)
                 currentEnemies.append(enemy)
         self.enemies = currentEnemies
@@ -203,6 +226,7 @@ class GameModel:
 
         screenEnemies = self.manageEnemies(time, dt)
 
+        
         self.gameScene.childs = [self.player]+screenShots+ screenEnemies
         #print(sg.findPosition(player,"Player"))
         return self.gameScene
