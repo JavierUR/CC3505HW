@@ -110,7 +110,7 @@ class GameModel:
         # Game status
         self.gameover = False
         self.remainingEnemies = nEnemies
-        self.wave = 1
+        self.wave = 0
         self.lastEnemyTimer = 0.0 #time of last enemy death
         self.waitSpawn = False
 
@@ -125,7 +125,7 @@ class GameModel:
         self.playerY += dt*vp*(self.controller.up - self.controller.down )
         # Avoid leaving the screen
         self.playerX = np.clip(self.playerX,-0.7,0.7)
-        self.playerY = np.clip(self.playerY,-0.9,0.8)
+        self.playerY = np.clip(self.playerY,-0.9,0.6)
 
     def spawnPlayerShot(self):
         self.playerShots.append(PlayerShot(self.playerX,self.playerY+0.1))
@@ -181,9 +181,13 @@ class GameModel:
             self.waitSpawn = True
         #Spawn new enemy wave
         elif self.remainingEnemies>0 and (time-self.lastEnemyTimer) > 1.0:
-            self.enemies.append(Enemy(0.0,0.9,time))
             self.wave+=1
-            self.remainingEnemies-=1
+            toSpawn = min(np.clip(self.wave, 0, 5),self.remainingEnemies)
+            x = (toSpawn-1)*-0.125
+            for i in range(toSpawn):
+                self.enemies.append(Enemy(x,0.9,time+np.random.random()))
+                self.remainingEnemies-=1
+                x+=0.25
             self.waitSpawn = False
 
     def manageEnemies(self, time, dt):
@@ -227,6 +231,6 @@ class GameModel:
         screenEnemies = self.manageEnemies(time, dt)
 
         
-        self.gameScene.childs = [self.player]+screenShots+ screenEnemies
+        self.gameScene.childs = [self.player] + screenShots + screenEnemies
         #print(sg.findPosition(player,"Player"))
         return self.gameScene

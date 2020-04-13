@@ -167,7 +167,7 @@ def createExplosion():
     gpuExplosion = es.toGPUShape(bs.Shape(vertices, indices))
 
     explosion =sg.SceneGraphNode("explosionModel")
-    explosion.transform = tr.uniformScale(0.15)
+    explosion.transform = tr.matmul([tr.translate(0.0,0.02,0.0),tr.uniformScale(0.15)])
     explosion.childs = [gpuExplosion]
 
     return explosion
