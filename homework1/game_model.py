@@ -42,13 +42,14 @@ class EnemyShot(Shot):
 
 # A class to manage each enemy
 class Enemy:
-    def __init__(self, x, y, time):
+    def __init__(self, x, y, time, trayectory):
         self.currentX = x
         self.currentY = y
         self.state = S_ALIVE
         self.initTime = time
         self.lastShot = time
         self.deathTime = None
+        self.trayectory = trayectory
 
     def spawnShot(self):
         return EnemyShot(self.currentX, self.currentY - 0.1)
@@ -62,7 +63,7 @@ class Enemy:
 
     def update(self,time):
         if self.state == S_ALIVE:
-            return
+            self.currentX, self.currentY = self.trayectory.get_pos(time)
         elif self.state == S_HIT:
             if self.deathTime is None:
                 self.deathTime = time
@@ -123,7 +124,7 @@ class GameModel:
         self.playerY += dt*vp*(self.controller.up - self.controller.down )
         # Avoid leaving the screen
         self.playerX = np.clip(self.playerX,-0.7,0.7)
-        self.playerY = np.clip(self.playerY,-0.9,0.6)
+        self.playerY = np.clip(self.playerY,-0.9,0.4)
 
     def spawnPlayerShot(self):
         self.playerShots.append(PlayerShot(self.playerX,self.playerY+0.1))
@@ -181,16 +182,20 @@ class GameModel:
             self.waitSpawn = True
         #Spawn new enemy wave
         elif self.remainingEnemies > 0 and (time-self.lastEnemyTimer) > 1.0:
-            self.wave+=1
+            self.wave += 1
             toSpawn = min(np.clip(self.wave, 0, 5),self.remainingEnemies)
-            x = (toSpawn-1)*-0.125
+            #x = (toSpawn-1)*-0.125
+            x = np.arange(0, (toSpawn)*0.25, 0.25) - (toSpawn-1)*0.125
+            x2 = x.copy()
+            np.random.shuffle(x2)
             for i in range(toSpawn):
-                self.enemies.append(Enemy(x, 0.9, time + np.random.random()))
-                self.remainingEnemies-=1
-                x+=0.25
+                trayectory = gu.LinearTrayectory(time, 1.5, x[i], 0.9, x2[i], 0.4)
+                self.enemies.append(Enemy(x[i], 0.9, time + np.random.random(),trayectory))
+                self.remainingEnemies -= 1
             self.waitSpawn = False
 
-    def manageEnemies(self, time, dt):
+    def manageEnemies(self, time):
+        # Function to update enemies status
         if len(self.enemies) == 0:
             self.spawnEnemies(time)
         screenEnemies = []
@@ -224,7 +229,7 @@ class GameModel:
             if self.controller.fire and (time - self.playerLSTime)>self.playerFR:
                 self.spawnPlayerShot()
                 self.playerLSTime = time
-        if self.playerState == S_HIT:
+        elif self.playerState == S_HIT:
             if self.playerHitTime is None:
                 self.playerHitTime = time
             elif (time - self.playerHitTime) > 0.2:
@@ -248,7 +253,7 @@ class GameModel:
 
         screenShots = self.moveShots(dt)
 
-        screenEnemies = self.manageEnemies(time, dt)
+        screenEnemies = self.manageEnemies(time)
 
         self.playerInteraction(time, dt)
         

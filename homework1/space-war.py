@@ -18,6 +18,7 @@ import scene_graph as sg
 import game_shapes as gs
 import game_model as gm
 import game_utils as gu
+
 # A class to store the application control
 class Controller:
     right = False
