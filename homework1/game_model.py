@@ -134,11 +134,13 @@ class GameModel:
         self.playerY = np.clip(self.playerY,-0.9,0.4)
 
     def spawnPlayerShot(self):
-        self.playerShots.append(PlayerShot(self.playerX,self.playerY+0.1))
+        # Function to spawn a player shot
+        self.playerShots.append(PlayerShot(self.playerX, self.playerY+0.1))
 
     def checkEnemyHit(self, shot):
+        # Function to check if a shot hits any enemy 
         for enemy in self.enemies:
-            if enemy.state == S_ALIVE and gu.checkHitbox(shot.currentX, shot.currentY, 
+            if enemy.state == S_ALIVE and gu.checkHitbox(shot.currentX, shot.currentY,
                                             enemy.currentX-0.08, enemy.currentY+0.05,
                                             enemy.currentX+0.08, enemy.currentY-0.05):
                 enemy.state = S_HIT
@@ -146,6 +148,7 @@ class GameModel:
         return False
 
     def checkPlayerHit(self, shot):
+        # Function to check if a shot hits the player
         if self.playerState == S_ALIVE:
             if gu.checkHitbox(shot.currentX, shot.currentY, 
                     self.playerX-0.08, self.playerY+0.05,
@@ -256,6 +259,7 @@ class GameModel:
             return []
 
     def hpStatusDraw(self):
+        # A bar displaying current player HP
         hpBar = sg.SceneGraphNode("hp_bar")
         hpBar.childs = []
         x = np.arange(0, (self.playerHP)*0.07, 0.07)
@@ -269,7 +273,7 @@ class GameModel:
         hpStatus.childs = [hpBar]
         return [hpStatus]
 
-    def updateScene(self, time):#084177#084177
+    def updateScene(self, time):
         dt = time - self.ltime
         self.ltime = time
         
