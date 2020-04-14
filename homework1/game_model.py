@@ -46,7 +46,6 @@ class Enemy:
         self.currentX = x
         self.currentY = y
         self.state = S_ALIVE
-        self.initTime = time
         self.lastShot = time
         self.deathTime = None
         self.trayectory = trayectory
@@ -184,10 +183,8 @@ class GameModel:
         elif self.remainingEnemies > 0 and (time-self.lastEnemyTimer) > 1.0:
             self.wave += 1
             toSpawn = min(np.clip(self.wave, 0, 5),self.remainingEnemies)
-            #x = (toSpawn-1)*-0.125
             x = np.arange(0, (toSpawn)*0.25, 0.25) - (toSpawn-1)*0.125
-            x2 = x.copy()
-            np.random.shuffle(x2)
+            x2 = x[gu.derangement(len(x))]
             for i in range(toSpawn):
                 trayectory = gu.LinearTrayectory(time, 1.5, x[i], 0.9, x2[i], 0.4)
                 self.enemies.append(Enemy(x[i], 0.9, time + np.random.random(),trayectory))

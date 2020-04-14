@@ -9,7 +9,19 @@ def checkHitbox(x, y, x1, y1, x2, y2):
     # Determine if point is inside hitbox
     return (x1 < x < x2) and (y2 < y < y1)
     
-# A class to ahndle trayectories
+def derangement(n):
+    # index array with all elements shuffled
+    if n ==1: 
+        return [0]
+    v=np.arange(n)
+    num=v.copy()
+    while True:
+        np.random.shuffle(v)
+        if np.all((v-num)!=0):
+            break
+    return v
+
+# A class to handle trayectories
 class Trayectory:
     def __init__(self, ti, dt):
         self.ti = ti
