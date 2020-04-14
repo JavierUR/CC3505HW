@@ -44,20 +44,22 @@ class EnemyShot(Shot):
 
 # A class to manage each enemy
 class Enemy:
-    def __init__(self, x, y, time, trayectory, visualModel):
+    def __init__(self, name, x, y, time, trayectory, visualModel):
         self.currentX = x
         self.currentY = y
         self.state = S_ALIVE
         self.lastShot = time
         self.deathTime = None
         self.trayectory = trayectory
-        self.visual = visualModel
+        self.sceneNode = sg.SceneGraphNode(name)
+        self.sceneNode.transform = tr.translate(x, y, 0.0)
+        self.sceneNode.childs = [visualModel]
 
     def spawnShot(self):
         return EnemyShot(self.currentX, self.currentY - 0.1)
 
     def shouldShoot(self, time):
-        if (time - self.lastShot) >2:
+        if (time - self.lastShot) > 2:
             self.lastShot = time
             return True
         else:
@@ -66,6 +68,7 @@ class Enemy:
     def update(self,time):
         if self.state == S_ALIVE:
             self.currentX, self.currentY = self.trayectory.get_pos(time)
+            self.sceneNode.transform = tr.translate(self.currentX, self.currentY, 0.0)
         elif self.state == S_HIT:
             if self.deathTime is None:
                 self.deathTime = time
@@ -201,7 +204,8 @@ class GameModel:
             waveModel = self.wave%3
             for i in range(toSpawn):
                 trayectory = gu.LinearTrayectory(time, 1.5, x[i], 1.1, x2[i], 0.4)
-                enemyShip = Enemy(x[i], 0.9, time + np.random.random(), trayectory, self.enemyModels[waveModel])
+                enemyShip = Enemy(f"enemy_{i}", x[i], 0.9, time + np.random.random(), 
+                                    trayectory, self.enemyModels[waveModel])
                 self.enemies.append(enemyShip)
                 self.remainingEnemies -= 1
             self.waitSpawn = False
@@ -218,10 +222,7 @@ class GameModel:
                 # spawn enemy shoot
                 if enemy.shouldShoot(time):
                     self.enemyShots.append(enemy.spawnShot())
-                screenEnemy = sg.SceneGraphNode(f"enemy_{i}")
-                screenEnemy.transform = tr.translate(enemy.currentX,enemy.currentY,0.0)
-                screenEnemy.childs = [enemy.visual]
-                screenEnemies.append(screenEnemy)
+                screenEnemies.append(enemy.sceneNode)
                 currentEnemies.append(enemy)
             elif enemy.state == S_HIT:
                 screenEnemy = sg.SceneGraphNode(f"dead_enemy_{i}")
