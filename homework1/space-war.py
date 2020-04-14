@@ -1,7 +1,7 @@
 # coding=utf-8
 """
 Javier Urrutia, CC3501, 2020-1
-Space Wars game, designed with the 
+Space Wars game, designed with the
 model-view-controller design pattern
 """
 import glfw
@@ -9,6 +9,7 @@ from OpenGL.GL import *
 import OpenGL.GL.shaders
 import numpy as np
 import sys
+import argparse
 
 import easy_shaders as es
 import basic_shapes as bs
@@ -47,6 +48,11 @@ def on_key(window, key, scancode, action, mods):
         sys.exit()
 
 if __name__ == "__main__":
+    # Parse game argument
+    parser = argparse.ArgumentParser(description='Space-Wars game.')
+    parser.add_argument('nEnemies', metavar='N', type=int,
+                    help='Number of enemies in th egame')
+    args = parser.parse_args()
 
     # Initialize glfw
     if not glfw.init():
@@ -85,7 +91,7 @@ if __name__ == "__main__":
     gameoverTray = gu.LinearTrayectory(0, 2, 0.0, 2.0, 0.0, 0.0)
     drawGameOver = False
 
-    gameModel = gm.GameModel(10, width, height, controller)
+    gameModel = gm.GameModel(args.nEnemies, width, height, controller)
     
     while not glfw.window_should_close(window):
         # Using GLFW to check for input events
