@@ -94,9 +94,11 @@ class GameModel:
         self.player.transform = tr.translate(self.playerX, self.playerY, 0.0)
         self.player.childs = [self.playerModel]
 
+        self.playerState = S_ALIVE
         self.playerSpeed = 1.0
         self.playerLSTime = 0.0
         self.playerFR = 0.8
+        self.playerHitTime = None
 
         # Objects list
         self.playerShots = []
@@ -136,11 +138,13 @@ class GameModel:
         return False
 
     def checkPlayerHit(self, shot):
-        if gu.checkHitbox(shot.currentX, shot.currentY, 
-                self.playerX-0.08, self.playerY+0.05,
-                self.playerX+0.08, self.playerY-0.05):
-            self.gameover = True
-            return True
+        if self.playerState == S_ALIVE:
+            if gu.checkHitbox(shot.currentX, shot.currentY, 
+                    self.playerX-0.08, self.playerY+0.05,
+                    self.playerX+0.08, self.playerY-0.05):
+                self.gameover = True
+                self.playerState = S_HIT
+                return True
         return False
 
     def moveShots(self, dt):
@@ -193,7 +197,7 @@ class GameModel:
         currentEnemies = []
         for i,enemy in enumerate(self.enemies):
             enemy.update(time)
-            if enemy.state==S_ALIVE:
+            if enemy.state == S_ALIVE:
                 # spawn enemy shoot
                 if enemy.shouldShoot(time):
                     self.enemyShots.append(enemy.spawnShot())
@@ -202,7 +206,7 @@ class GameModel:
                 screenEnemy.childs = [self.enemyModel]
                 screenEnemies.append(screenEnemy)
                 currentEnemies.append(enemy)
-            elif enemy.state==S_HIT:
+            elif enemy.state == S_HIT:
                 screenEnemy = sg.SceneGraphNode(f"dead_enemy_{i}")
                 screenEnemy.transform = tr.translate(enemy.currentX,enemy.currentY,0.0)
                 screenEnemy.childs = [self.explosionmodel]
@@ -211,22 +215,45 @@ class GameModel:
         self.enemies = currentEnemies
         return screenEnemies
 
+    def playerInteraction(self,time, dt):
+        if not self.gameover:
+            # Update player position
+            self.movePlayer(dt)
+            self.player.transform = tr.translate(self.playerX, self.playerY, 0.0)
+            # manage shots
+            if self.controller.fire and (time - self.playerLSTime)>self.playerFR:
+                self.spawnPlayerShot()
+                self.playerLSTime = time
+        if self.playerState == S_HIT:
+            if self.playerHitTime is None:
+                self.playerHitTime = time
+            elif (time - self.playerHitTime) > 0.2:
+                self.playerState = S_DEAD
+
+    def playerDraw(self):
+        if self.playerState == S_ALIVE:
+            return [self.player]
+        elif self.playerState == S_HIT:
+            explosion = sg.SceneGraphNode("Dead_player")
+            explosion.transform = tr.translate(self.playerX, self.playerY, 0.0)
+            explosion.childs = [self.explosionmodel]
+            return [explosion]
+        else:
+            return []
+
     def updateScene(self, time):
         dt = time - self.ltime
         self.ltime = time
-        # Update player position
-        self.movePlayer(dt)
-        self.player.transform = tr.translate(self.playerX, self.playerY, 0.0)
-        # manage shots
-        if self.controller.fire and (time - self.playerLSTime)>self.playerFR:
-            self.spawnPlayerShot()
-            self.playerLSTime = time
+        
 
         screenShots = self.moveShots(dt)
 
         screenEnemies = self.manageEnemies(time, dt)
 
+        self.playerInteraction(time, dt)
         
-        self.gameScene.childs = [self.player] + screenShots + screenEnemies
+        screenPlayer = self.playerDraw()
+
+        self.gameScene.childs = screenPlayer + screenShots + screenEnemies
         #print(sg.findPosition(player,"Player"))
         return self.gameScene
