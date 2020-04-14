@@ -60,6 +60,8 @@ def enemy_wing_shape(r,g,b):
 
 def create_enemy(bodyColor, wingColor):
     # Generate enemy model
+    # bodyColor - tuple (r, g, b)
+    # wingColor - tuple (r, g, b)
     # Body
     gpuBody = es.toGPUShape(bs.createColorQuad(*bodyColor))
 
@@ -189,3 +191,13 @@ def create_explosion():
     explosion.childs = [gpuExplosion]
 
     return explosion
+
+def create_hp_block():
+    # Generate hp block on GPU
+    gpuBlock = es.toGPUShape(bs.createColorQuad(0.9,0.0,0.1))
+
+    hpBlock = sg.SceneGraphNode("HP Block")
+    hpBlock.transform = tr.scale(0.05, 0.1, 1.0)
+    hpBlock.childs = [gpuBlock]
+
+    return hpBlock

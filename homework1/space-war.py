@@ -51,7 +51,7 @@ if __name__ == "__main__":
     # Parse game argument
     parser = argparse.ArgumentParser(description='Space-Wars game.')
     parser.add_argument('nEnemies', metavar='N', type=int,
-                    help='Number of enemies in th egame')
+                    help='Number of enemies in the game')
     args = parser.parse_args()
 
     # Initialize glfw

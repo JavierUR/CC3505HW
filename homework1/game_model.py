@@ -24,6 +24,7 @@ class Shot(object):
         self.currentY = y
         self.inScreen = True
 
+# Class for player shot
 class PlayerShot(Shot):
     def __init__(self, x, y):
         super().__init__(x, y)
@@ -32,6 +33,7 @@ class PlayerShot(Shot):
         self.currentY += dt*self.speed
         self.inScreen = (self.currentY < 1.0)
 
+# Class for enemy shot
 class EnemyShot(Shot):
     def __init__(self, x, y):
         super().__init__(x, y)
@@ -90,6 +92,7 @@ class GameModel:
         self.playerShotModel = gs.create_shot(0.9, 0.5, 0.0)
         self.enemyShotModel = gs.create_shot(0.4, 0.2, 1.0)
         self.explosionmodel = gs.create_explosion()
+        self.hpBlockModel = gs.create_hp_block()
 
         # Spawn player
         self.playerX = 0.0
@@ -103,6 +106,7 @@ class GameModel:
         self.playerLSTime = 0.0
         self.playerFR = 0.8
         self.playerHitTime = None
+        self.playerHP = 3
 
         # Objects list
         self.playerShots = []
@@ -146,8 +150,10 @@ class GameModel:
             if gu.checkHitbox(shot.currentX, shot.currentY, 
                     self.playerX-0.08, self.playerY+0.05,
                     self.playerX+0.08, self.playerY-0.05):
-                self.gameover = True
-                self.playerState = S_HIT
+                self.playerHP -= 1
+                if self.playerHP == 0:
+                    self.gameover = True
+                    self.playerState = S_HIT
                 return True
         return False
 
@@ -249,6 +255,20 @@ class GameModel:
         else:
             return []
 
+    def hpStatusDraw(self):
+        hpBar = sg.SceneGraphNode("hp_bar")
+        hpBar.childs = []
+        x = np.arange(0, (self.playerHP)*0.07, 0.07)
+        for i in range(self.playerHP):
+            hpBlock = sg.SceneGraphNode(f"hp_{i}")
+            hpBlock.transform = tr.translate(x[i], 0.0, 0.0)
+            hpBlock.childs = [self.hpBlockModel]
+            hpBar.childs.append(hpBlock)
+        hpStatus = sg.SceneGraphNode("hp_status")
+        hpStatus.transform = tr.translate(-0.65, 0.9, 0.0)
+        hpStatus.childs = [hpBar]
+        return [hpStatus]
+
     def updateScene(self, time):#084177#084177
         dt = time - self.ltime
         self.ltime = time
@@ -262,6 +282,7 @@ class GameModel:
         
         screenPlayer = self.playerDraw()
 
-        self.gameScene.childs = screenPlayer + screenShots + screenEnemies
+        screenHPBar = self.hpStatusDraw()
+        self.gameScene.childs = screenPlayer + screenShots + screenEnemies + screenHPBar
         #print(sg.findPosition(player,"Player"))
         return self.gameScene
