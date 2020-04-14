@@ -42,13 +42,14 @@ class EnemyShot(Shot):
 
 # A class to manage each enemy
 class Enemy:
-    def __init__(self, x, y, time, trayectory):
+    def __init__(self, x, y, time, trayectory, visualModel):
         self.currentX = x
         self.currentY = y
         self.state = S_ALIVE
         self.lastShot = time
         self.deathTime = None
         self.trayectory = trayectory
+        self.visual = visualModel
 
     def spawnShot(self):
         return EnemyShot(self.currentX, self.currentY - 0.1)
@@ -78,13 +79,16 @@ class GameModel:
         self.controller = controller
         # Create game scene
         self.gameScene = sg.SceneGraphNode("gameScene")
-        self.gameScene.transform = tr.scale(screenHeight/screenWidht,1.0,1.0)
+        self.gameScene.transform = tr.scale(screenHeight/ screenWidht, 1.0, 1.0)
 
         # Load game models
-        self.enemyModel = gs.create_enemy()
+        enemyModel = gs.create_enemy((0.5, 0, 0.38), (0.0, 0.38, 0.5))
+        enemyModel2 = gs.create_enemy((0.73, 0.42, 0.34), (0.19, 0.28, 0.37))
+        enemyModel3 = gs.create_enemy((0.03, 25, 0.47), (0.41, 0.45, 0.40))
+        self.enemyModels = [enemyModel, enemyModel2, enemyModel3]
         self.playerModel = gs.create_player()
-        self.playerShotModel = gs.create_shot(0.9,0.5,0.0)
-        self.enemyShotModel = gs.create_shot(0.4,0.2,1.0)
+        self.playerShotModel = gs.create_shot(0.9, 0.5, 0.0)
+        self.enemyShotModel = gs.create_shot(0.4, 0.2, 1.0)
         self.explosionmodel = gs.create_explosion()
 
         # Spawn player
@@ -182,12 +186,14 @@ class GameModel:
         #Spawn new enemy wave
         elif self.remainingEnemies > 0 and (time-self.lastEnemyTimer) > 1.0:
             self.wave += 1
-            toSpawn = min(np.clip(self.wave, 0, 5),self.remainingEnemies)
+            toSpawn = min(np.clip(self.wave, 0, 5), self.remainingEnemies)
             x = np.arange(0, (toSpawn)*0.25, 0.25) - (toSpawn-1)*0.125
             x2 = x[gu.derangement(len(x))]
+            waveModel = self.wave%3
             for i in range(toSpawn):
                 trayectory = gu.LinearTrayectory(time, 1.5, x[i], 1.1, x2[i], 0.4)
-                self.enemies.append(Enemy(x[i], 0.9, time + np.random.random(),trayectory))
+                enemyShip = Enemy(x[i], 0.9, time + np.random.random(), trayectory, self.enemyModels[waveModel])
+                self.enemies.append(enemyShip)
                 self.remainingEnemies -= 1
             self.waitSpawn = False
 
@@ -205,7 +211,7 @@ class GameModel:
                     self.enemyShots.append(enemy.spawnShot())
                 screenEnemy = sg.SceneGraphNode(f"enemy_{i}")
                 screenEnemy.transform = tr.translate(enemy.currentX,enemy.currentY,0.0)
-                screenEnemy.childs = [self.enemyModel]
+                screenEnemy.childs = [enemy.visual]
                 screenEnemies.append(screenEnemy)
                 currentEnemies.append(enemy)
             elif enemy.state == S_HIT:
@@ -243,7 +249,7 @@ class GameModel:
         else:
             return []
 
-    def updateScene(self, time):
+    def updateScene(self, time):#084177#084177
         dt = time - self.ltime
         self.ltime = time
         

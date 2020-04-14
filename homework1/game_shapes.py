@@ -58,13 +58,13 @@ def enemy_wing_shape(r,g,b):
 
     return bs.Shape(vertices, indices)
 
-def create_enemy():
+def create_enemy(bodyColor, wingColor):
     # Generate enemy model
     # Body
-    gpuBody = es.toGPUShape(bs.createColorQuad(0.5, 0, 0.38))
+    gpuBody = es.toGPUShape(bs.createColorQuad(*bodyColor))
 
     # Wing
-    gpuWing = es.toGPUShape(enemy_wing_shape(0.0, 0.38, 0.5))
+    gpuWing = es.toGPUShape(enemy_wing_shape(*wingColor))
 
     enemyBody = sg.SceneGraphNode("body")
     enemyBody.childs = [gpuBody]
