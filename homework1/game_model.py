@@ -118,6 +118,7 @@ class Player(Ship):
     shipHalfWidth = 0.08
     shipHalfHeight = 0.05
     playerSpeed = 1.0
+
     def __init__(self, name, x, y, time, controller, visualModel):
         super().__init__(name, x, y, time, visualModel, 3)
         self.controller = controller
@@ -125,7 +126,7 @@ class Player(Ship):
     def spawnShot(self, time):
         # Spawn a player shot
         self.lastShot = time
-        return PlayerShot(self.currentX, self.currentY - self.shipHalfHeight)
+        return PlayerShot(self.currentX, self.currentY + self.shipHalfHeight)
 
     def movePlayer(self, dt):
         # Change speed if moving in two axes

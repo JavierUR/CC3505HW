@@ -43,6 +43,27 @@ def create_gameover_screen(filename):
     gameoverVertical.childs = [gameover]
     return gameoverVertical
 
+def flame_shape():
+    # Ship flame model
+    r1,g1,b1 = (0.95,0.3,0.0)
+    r2,g2,b2 = (0.95,0.6,0.0)
+    # Defining locations and colors for each vertex of the shape    
+    vertices = [
+    #   positions        colors
+        -0.25, 0.0,  0.0, r1, g1, b1,
+         0.0, -0.75, 0.0, r1, g1, b1,
+         0.25, 0.0,  0.0, r1, g1, b1,
+         0.0, -0.4,  0.0, r2, g2, b2]
+
+    # Defining connections among vertices
+    # We have a triangle every 3 indices specified
+    indices = [
+         0, 1, 2,
+         0, 3, 2]
+
+    flame = bs.Shape(vertices, indices)
+    return flame
+
 def enemy_wing_shape(r,g,b):
     # Defining locations and colors for each vertex of the shape    
     vertices = [
@@ -141,6 +162,9 @@ def create_player():
     # WingDown
     gpuWingDown = es.toGPUShape(player_lower_wing_shape(0.427,0.447,0.458))
 
+    #Flame
+    gpuFlame = es.toGPUShape(flame_shape())
+
     playerBody = sg.SceneGraphNode("body")
     playerBody.childs = [gpuBody]
 
@@ -150,9 +174,13 @@ def create_player():
     playerDownWing = sg.SceneGraphNode("wing2")
     playerDownWing.childs = [gpuWingDown]
 
+    playerEngine = sg.SceneGraphNode("engine")
+    playerEngine.transform = tr.matmul([tr.translate(0.0, -0.525, 0.0),tr.uniformScale(0.9)])
+    playerEngine.childs = [gpuFlame]
+
     player = sg.SceneGraphNode("playerModel")
     player.transform = tr.uniformScale(0.1)
-    player.childs = [playerUpWing, playerDownWing, playerBody]
+    player.childs = [playerUpWing, playerDownWing, playerBody, playerEngine]
 
     return player
 
