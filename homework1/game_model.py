@@ -42,46 +42,119 @@ class EnemyShot(Shot):
         self.currentY -= dt*self.speed
         self.inScreen = (self.currentY > -1.0)
 
-# A class to manage each enemy
-class Enemy:
-    def __init__(self, name, x, y, time, trayectory, visualModel):
+# A class to manage game spaceships
+class Ship:
+    explosionTime = 0.2
+    shipHalfWidth = 0.0
+    shipHalfHeight = 0.0
+    firePeriod = 1.0
+    
+    def __init__(self, name, x, y, createTime, visualModel, hp):
         self.currentX = x
         self.currentY = y
-        self.state = S_ALIVE
-        self.lastShot = time
-        self.deathTime = None
-        self.trayectory = trayectory
         self.sceneNode = sg.SceneGraphNode(name)
         self.sceneNode.transform = tr.translate(x, y, 0.0)
         self.sceneNode.childs = [visualModel]
+        self.state = S_ALIVE
+        self.lastShot = createTime
+        self.deathTime = None
+        self.hp = hp
 
-    def spawnShot(self):
-        return EnemyShot(self.currentX, self.currentY - 0.1)
+    def manageHitState(self, time):
+        # Function to manage ship explosion effect
+        if (time-self.deathTime) > self.explosionTime:
+            self.state = S_DEAD
 
-    def shouldShoot(self, time):
-        if (time - self.lastShot) > 2:
-            self.lastShot = time
+    def takeHit(self, time):
+        # Function to account hit
+        self.hp -= 1
+        if self.hp == 0:
+            self.state = S_HIT
+            self.deathTime = time
+
+    def isHit(self, shot, time):
+        # Function to verify if a shot hits the ship
+        if self.state == S_ALIVE and \
+                gu.checkHitbox(shot.currentX, shot.currentY,
+                            self.currentX-self.shipHalfWidth, self.currentY+self.shipHalfHeight,
+                            self.currentX+self.shipHalfWidth, self.currentY-self.shipHalfHeight):
+            self.takeHit(time)
+            return True
+        return False
+
+    def canShoot(self, time):
+        # Funtion to verify if the fire period passed
+        if (time - self.lastShot) > self.firePeriod:
             return True
         else:
             return False
 
+# A class to manage each enemy
+class Enemy(Ship):
+    firePeriod = 2.0
+    shipHalfWidth = 0.08
+    shipHalfHeight = 0.04
+    def __init__(self, name, x, y, time, trayectory, visualModel):
+        super().__init__(name, x, y, time, visualModel, 1)
+        self.trayectory = trayectory
+
+    def spawnShot(self, time):
+        # Spawn an enemy shot
+        self.lastShot = time
+        return EnemyShot(self.currentX, self.currentY - self.shipHalfHeight)
+
+
     def update(self,time):
         if self.state == S_ALIVE:
+            # Update ship position
             self.currentX, self.currentY = self.trayectory.get_pos(time)
             self.sceneNode.transform = tr.translate(self.currentX, self.currentY, 0.0)
         elif self.state == S_HIT:
-            if self.deathTime is None:
-                self.deathTime = time
-            elif (time-self.deathTime) > 0.2:
-                self.state = S_DEAD
+            self.manageHitState(time)
+
+# A class to manage the player ship
+class Player(Ship):
+    firePeriod = 0.8
+    shipHalfWidth = 0.08
+    shipHalfHeight = 0.05
+    playerSpeed = 1.0
+    def __init__(self, name, x, y, time, controller, visualModel):
+        super().__init__(name, x, y, time, visualModel, 3)
+        self.controller = controller
+
+    def spawnShot(self, time):
+        # Spawn a player shot
+        self.lastShot = time
+        return PlayerShot(self.currentX, self.currentY - self.shipHalfHeight)
+
+    def movePlayer(self, dt):
+        # Change speed if moving in two axes
+        if (self.controller.right or self.controller.left) and \
+                (self.controller.up or self.controller.down):
+            vp = self.playerSpeed / np.sqrt(2)
+        else:
+            vp = self.playerSpeed
+        self.currentX += dt*vp*(self.controller.right - self.controller.left )
+        self.currentY += dt*vp*(self.controller.up - self.controller.down )
+        # Avoid leaving the screen
+        self.currentX = np.clip(self.currentX,-0.7,0.7)
+        self.currentY = np.clip(self.currentY,-0.9,0.4)
+
+    def update(self, time, dt):
+        if self.state == S_ALIVE:
+            # Update player position
+            self.movePlayer(dt)
+            self.sceneNode.transform = tr.translate(self.currentX, self.currentY, 0.0)
+        elif self.state == S_HIT:
+            self.manageHitState(time)
 
 # A class to manage game state
 class GameModel:
     def __init__(self, nEnemies, screenWidht, screenHeight, controller):
         # Start clock
         self.ltime = 0.0
-        # reference to the game controller
-        self.controller = controller
+        # reference to the gaplayerme controller
+
         # Create game scene
         self.gameScene = sg.SceneGraphNode("gameScene")
         self.gameScene.transform = tr.scale(screenHeight/ screenWidht, 1.0, 1.0)
@@ -98,18 +171,7 @@ class GameModel:
         self.hpBlockModel = gs.create_hp_block()
 
         # Spawn player
-        self.playerX = 0.0
-        self.playerY = -0.75
-        self.player = sg.SceneGraphNode("Player")
-        self.player.transform = tr.translate(self.playerX, self.playerY, 0.0)
-        self.player.childs = [self.playerModel]
-
-        self.playerState = S_ALIVE
-        self.playerSpeed = 1.0
-        self.playerLSTime = 0.0
-        self.playerFR = 0.8
-        self.playerHitTime = None
-        self.playerHP = 3
+        self.player = Player("player", 0.0, -0.75, self.ltime, controller, self.playerModel)
 
         # Objects list
         self.playerShots = []
@@ -123,54 +185,21 @@ class GameModel:
         self.lastEnemyTimer = 0.0 #time of last enemy death
         self.waitSpawn = False
 
-    def movePlayer(self, dt):
-        # Change speed if moving in two axes
-        if (self.controller.right or self.controller.left) and \
-                (self.controller.up or self.controller.down):
-            vp = self.playerSpeed / np.sqrt(2)
-        else:
-            vp = self.playerSpeed
-        self.playerX += dt*vp*(self.controller.right - self.controller.left )
-        self.playerY += dt*vp*(self.controller.up - self.controller.down )
-        # Avoid leaving the screen
-        self.playerX = np.clip(self.playerX,-0.7,0.7)
-        self.playerY = np.clip(self.playerY,-0.9,0.4)
-
-    def spawnPlayerShot(self):
-        # Function to spawn a player shot
-        self.playerShots.append(PlayerShot(self.playerX, self.playerY+0.1))
-
-    def checkEnemyHit(self, shot):
+    def checkEnemyHit(self, shot, time):
         # Function to check if a shot hits any enemy 
         for enemy in self.enemies:
-            if enemy.state == S_ALIVE and gu.checkHitbox(shot.currentX, shot.currentY,
-                                            enemy.currentX-0.08, enemy.currentY+0.05,
-                                            enemy.currentX+0.08, enemy.currentY-0.05):
-                enemy.state = S_HIT
+            if enemy.isHit(shot, time):
                 return True
         return False
 
-    def checkPlayerHit(self, shot):
-        # Function to check if a shot hits the player
-        if self.playerState == S_ALIVE:
-            if gu.checkHitbox(shot.currentX, shot.currentY, 
-                    self.playerX-0.08, self.playerY+0.05,
-                    self.playerX+0.08, self.playerY-0.05):
-                self.playerHP -= 1
-                if self.playerHP == 0:
-                    self.gameover = True
-                    self.playerState = S_HIT
-                return True
-        return False
-
-    def moveShots(self, dt):
+    def moveShots(self, dt, time):
         # Function to move shots on the game and check hits
         currentPlayerShots = []
         currentEnemyShots = []
         graphicShots = []
-        for i,pshot in enumerate(self.playerShots):
+        for i, pshot in enumerate(self.playerShots):
             if pshot.inScreen:
-                if not self.checkEnemyHit(pshot):
+                if not self.checkEnemyHit(pshot, time):
                     pshot.updatePos(dt)
                     shot = sg.SceneGraphNode(f"PShot_{i}")
                     shot.transform = tr.translate(pshot.currentX,pshot.currentY,0.0)
@@ -178,9 +207,9 @@ class GameModel:
                     graphicShots.append(shot)
                     currentPlayerShots.append(pshot)
         self.playerShots = currentPlayerShots
-        for i,eshot in enumerate(self.enemyShots):
+        for i, eshot in enumerate(self.enemyShots):
             if eshot.inScreen:
-                if not self.checkPlayerHit(eshot):
+                if not self.player.isHit(eshot, time):
                     eshot.updatePos(dt)
                     shot = sg.SceneGraphNode(f"EShot_{i}")
                     shot.transform = tr.translate(eshot.currentX,eshot.currentY,0.0)
@@ -220,8 +249,8 @@ class GameModel:
             enemy.update(time)
             if enemy.state == S_ALIVE:
                 # spawn enemy shoot
-                if enemy.shouldShoot(time):
-                    self.enemyShots.append(enemy.spawnShot())
+                if enemy.canShoot(time):
+                    self.enemyShots.append(enemy.spawnShot(time))
                 screenEnemies.append(enemy.sceneNode)
                 currentEnemies.append(enemy)
             elif enemy.state == S_HIT:
@@ -233,38 +262,12 @@ class GameModel:
         self.enemies = currentEnemies
         return screenEnemies
 
-    def playerInteraction(self,time, dt):
-        if not self.gameover:
-            # Update player position
-            self.movePlayer(dt)
-            self.player.transform = tr.translate(self.playerX, self.playerY, 0.0)
-            # manage shots
-            if self.controller.fire and (time - self.playerLSTime)>self.playerFR:
-                self.spawnPlayerShot()
-                self.playerLSTime = time
-        elif self.playerState == S_HIT:
-            if self.playerHitTime is None:
-                self.playerHitTime = time
-            elif (time - self.playerHitTime) > 0.2:
-                self.playerState = S_DEAD
-
-    def playerDraw(self):
-        if self.playerState == S_ALIVE:
-            return [self.player]
-        elif self.playerState == S_HIT:
-            explosion = sg.SceneGraphNode("Dead_player")
-            explosion.transform = tr.translate(self.playerX, self.playerY, 0.0)
-            explosion.childs = [self.explosionmodel]
-            return [explosion]
-        else:
-            return []
-
     def hpStatusDraw(self):
         # A bar displaying current player HP
         hpBar = sg.SceneGraphNode("hp_bar")
         hpBar.childs = []
-        x = np.arange(0, (self.playerHP)*0.07, 0.07)
-        for i in range(self.playerHP):
+        x = np.arange(0, (self.player.hp)*0.07, 0.07)
+        for i in range(self.player.hp):
             hpBlock = sg.SceneGraphNode(f"hp_{i}")
             hpBlock.transform = tr.translate(x[i], 0.0, 0.0)
             hpBlock.childs = [self.hpBlockModel]
@@ -274,20 +277,33 @@ class GameModel:
         hpStatus.childs = [hpBar]
         return [hpStatus]
 
+    def managePlayer(self, time, dt):
+        # Manage the player ship
+        # interaction
+        self.player.update(time, dt)
+        if self.player.state == S_ALIVE:
+            # manage shots
+            if self.player.controller.fire and self.player.canShoot(time):
+                self.playerShots.append(self.player.spawnShot(time))
+            # Player draw
+            return [self.player.sceneNode]
+        elif self.player.state == S_HIT:
+            self.gameover = True
+            explosion = sg.SceneGraphNode("Dead_player")
+            explosion.transform = tr.translate(self.player.currentX, self.player.currentY, 0.0)
+            explosion.childs = [self.explosionmodel]
+            return [explosion]
+        else:
+            return []
+
     def updateScene(self, time):
         dt = time - self.ltime
         self.ltime = time
-        
-
-        screenShots = self.moveShots(dt)
-
+        # Update game elements
+        screenShots = self.moveShots(dt, time)
         screenEnemies = self.manageEnemies(time)
-
-        self.playerInteraction(time, dt)
-        
-        screenPlayer = self.playerDraw()
-
+        screenPlayer = self.managePlayer(time, dt)
         screenHPBar = self.hpStatusDraw()
+
         self.gameScene.childs = screenPlayer + screenShots + screenEnemies + screenHPBar
-        #print(sg.findPosition(player,"Player"))
         return self.gameScene
