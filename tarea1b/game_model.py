@@ -21,45 +21,62 @@ G_ONGOING = 0
 G_WIN   = 1
 G_LOST  = 2
 
-# A class to manage a shot movement
-class Shot(object):
-    speed = 0.9
-    def __init__(self, x, y):
+# A class to manage each game element visual node
+class GameElement:
+    def __init__(self, name, x, y):
         self.currentX = x
         self.currentY = y
+        self.sceneNode = sg.SceneGraphNode(name)
+        self.sceneNode.transform = tr.translate(x, y, 0.0)
+
+    def setVisual(self, visualModel):
+        # Method to set the scene graph node model
+        self.sceneNode.childs = [visualModel]
+
+    def updateVisualPos(self):
+        # Method to set visual node postion to element position
+        self.sceneNode.transform = tr.translate(self.currentX, self.currentY, 0.0)
+    
+# A class to manage a shot movement
+class Shot(GameElement):
+    speed = 0.9
+    def __init__(self, name, x, y):
+        super().__init__(name, x, y)
         self.inScreen = True
 
 # Class for player shot
 class PlayerShot(Shot):
     def __init__(self, x, y):
-        super().__init__(x, y)
+        super().__init__(f"pshot_{x}_{y}", x, y)
 
     def updatePos(self, dt):
+        # Update shot position. Player shots move up
         self.currentY += dt*self.speed
+        self.updateVisualPos()
         self.inScreen = (self.currentY < 1.0)
 
 # Class for enemy shot
 class EnemyShot(Shot):
     def __init__(self, x, y):
-        super().__init__(x, y)
+        super().__init__(f"eshot_{x}_{y}", x, y)
 
     def updatePos(self, dt):
+        # Update shot position. Enemy shots move down
         self.currentY -= dt*self.speed
+        self.updateVisualPos()
         self.inScreen = (self.currentY > -1.0)
 
 # A class to manage game spaceships
-class Ship:
+class Ship(GameElement):
     explosionTime = 0.2
     shipHalfWidth = 0.0
     shipHalfHeight = 0.0
     firePeriod = 1.0
     
     def __init__(self, name, x, y, createTime, visualModel, hp):
-        self.currentX = x
-        self.currentY = y
-        self.sceneNode = sg.SceneGraphNode(name)
-        self.sceneNode.transform = tr.translate(x, y, 0.0)
-        self.sceneNode.childs = [visualModel]
+        super().__init__(name, x, y)
+        self.setVisual(visualModel)
+        #self.sceneNode.childs = [visualModel]
         self.state = S_ALIVE
         self.lastShot = createTime
         self.deathTime = None
@@ -67,7 +84,7 @@ class Ship:
 
     def manageHitState(self, time):
         # Function to manage ship explosion effect
-        if (time-self.deathTime) > self.explosionTime:
+        if self.state == S_HIT and (time-self.deathTime) > self.explosionTime:
             self.state = S_DEAD
 
     def takeHit(self, time):
@@ -113,7 +130,7 @@ class Enemy(Ship):
         if self.state == S_ALIVE:
             # Update ship position
             self.currentX, self.currentY = self.trayectory.get_pos(time)
-            self.sceneNode.transform = tr.translate(self.currentX, self.currentY, 0.0)
+            self.updateVisualPos()
         elif self.state == S_HIT:
             self.manageHitState(time)
 
@@ -150,7 +167,7 @@ class Player(Ship):
         if self.state == S_ALIVE:
             # Update player position
             self.movePlayer(dt)
-            self.sceneNode.transform = tr.translate(self.currentX, self.currentY, 0.0)
+            self.updateVisualPos()
         elif self.state == S_HIT:
             self.manageHitState(time)
 
@@ -248,7 +265,11 @@ class GameModel:
             if enemy.state == S_ALIVE:
                 # spawn enemy shoot
                 if enemy.canShoot(time):
-                    self.enemyShots.append(enemy.spawnShot(time))
+                    shot = enemy.spawnShot(time)
+                    shot.setVisual(self.enemyShotModel)
+                    self.enemyShots.append(shot)
+            elif enemy.state == S_HIT:
+                enemy.setVisual(self.explosionmodel)
             if enemy.state != S_DEAD:
                 currentEnemies.append(enemy)
         self.enemies = currentEnemies
@@ -275,9 +296,12 @@ class GameModel:
         if self.player.state == S_ALIVE:
             # manage shots
             if self.player.controller.fire and self.player.canShoot(time):
-                self.playerShots.append(self.player.spawnShot(time))
+                shot = self.player.spawnShot(time)
+                shot.setVisual(self.playerShotModel)
+                self.playerShots.append(shot)
             # Player draw
         elif self.player.state == S_HIT:
+            self.player.setVisual(self.explosionmodel)
             self.state = G_LOST
 
     def updateScene(self, time):
@@ -290,14 +314,8 @@ class GameModel:
 
     def getShipGraphNode(self, ship):
         # Function to get the scene node of a ship
-        if ship.state == S_ALIVE:
+        if ship.state != S_DEAD:
             return ship.sceneNode
-        elif ship.state == S_HIT:
-            # If the ship is hit, draw an explosion
-            explosion = sg.SceneGraphNode("dead_" + ship.sceneNode.name)
-            explosion.transform = tr.translate(ship.currentX, ship.currentY, 0.0)
-            explosion.childs = [self.explosionmodel]
-            return explosion
         else:
             return None
 
@@ -307,18 +325,9 @@ class GameModel:
             node = self.getShipGraphNode(ship)
             if node is not None:
                 screenElements.append(node)
-        for i,eshot in enumerate(self.enemyShots):
-            if eshot.inScreen:
-                shot = sg.SceneGraphNode(f"EShot_{i}")
-                shot.transform = tr.translate(eshot.currentX,eshot.currentY,0.0)
-                shot.childs = [self.enemyShotModel]
-                screenElements.append(shot)
-        for i,pshot in enumerate(self.playerShots):
-            if pshot.inScreen:
-                shot = sg.SceneGraphNode(f"PShot_{i}")
-                shot.transform = tr.translate(pshot.currentX,pshot.currentY,0.0)
-                shot.childs = [self.playerShotModel]
-                screenElements.append(shot)
+        for shot in self.enemyShots+self.playerShots:
+            if shot.inScreen:
+                screenElements.append(shot.sceneNode)
         screenElements.append(self.hpStatusDraw())
         self.gameScene.childs = screenElements
         return self.gameScene
