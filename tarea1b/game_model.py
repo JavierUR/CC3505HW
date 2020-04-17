@@ -202,28 +202,18 @@ class GameModel:
         # Function to move shots on the game and check hits
         currentPlayerShots = []
         currentEnemyShots = []
-        graphicShots = []
-        for i, pshot in enumerate(self.playerShots):
+        for pshot in self.playerShots:
             if pshot.inScreen:
                 if not self.checkEnemyHit(pshot, time):
                     pshot.updatePos(dt)
-                    shot = sg.SceneGraphNode(f"PShot_{i}")
-                    shot.transform = tr.translate(pshot.currentX,pshot.currentY,0.0)
-                    shot.childs = [self.playerShotModel]
-                    graphicShots.append(shot)
                     currentPlayerShots.append(pshot)
         self.playerShots = currentPlayerShots
-        for i, eshot in enumerate(self.enemyShots):
+        for eshot in self.enemyShots:
             if eshot.inScreen:
                 if not self.player.isHit(eshot, time):
                     eshot.updatePos(dt)
-                    shot = sg.SceneGraphNode(f"EShot_{i}")
-                    shot.transform = tr.translate(eshot.currentX,eshot.currentY,0.0)
-                    shot.childs = [self.enemyShotModel]
-                    graphicShots.append(shot)
                     currentEnemyShots.append(eshot)
         self.enemyShots = currentEnemyShots
-        return graphicShots
 
     def spawnEnemies(self, time):
         #Wait 1 second before new enemies
@@ -252,8 +242,6 @@ class GameModel:
                 self.state = G_WIN
             else:
                 self.spawnEnemies(time)
-
-        screenEnemies = []
         currentEnemies = []
         for i,enemy in enumerate(self.enemies):
             enemy.update(time)
@@ -261,16 +249,9 @@ class GameModel:
                 # spawn enemy shoot
                 if enemy.canShoot(time):
                     self.enemyShots.append(enemy.spawnShot(time))
-                screenEnemies.append(enemy.sceneNode)
-                currentEnemies.append(enemy)
-            elif enemy.state == S_HIT:
-                screenEnemy = sg.SceneGraphNode(f"dead_enemy_{i}")
-                screenEnemy.transform = tr.translate(enemy.currentX,enemy.currentY,0.0)
-                screenEnemy.childs = [self.explosionmodel]
-                screenEnemies.append(screenEnemy)
+            if enemy.state != S_DEAD:
                 currentEnemies.append(enemy)
         self.enemies = currentEnemies
-        return screenEnemies
 
     def hpStatusDraw(self):
         # A bar displaying current player HP
@@ -285,7 +266,7 @@ class GameModel:
         hpStatus = sg.SceneGraphNode("hp_status")
         hpStatus.transform = tr.translate(-0.65, 0.9, 0.0)
         hpStatus.childs = [hpBar]
-        return [hpStatus]
+        return hpStatus
 
     def managePlayer(self, time, dt):
         # Manage the player ship
@@ -296,23 +277,49 @@ class GameModel:
             if self.player.controller.fire and self.player.canShoot(time):
                 self.playerShots.append(self.player.spawnShot(time))
             # Player draw
-            return [self.player.sceneNode]
         elif self.player.state == S_HIT:
             self.state = G_LOST
-            explosion = sg.SceneGraphNode("Dead_player")
-            explosion.transform = tr.translate(self.player.currentX, self.player.currentY, 0.0)
-            explosion.childs = [self.explosionmodel]
-            return [explosion]
-        else:
-            return []
 
     def updateScene(self, time):
         dt = time - self.ltime
         self.ltime = time
         # Update game elements
-        screenShots = self.moveShots(dt, time)
-        screenEnemies = self.manageEnemies(time)
-        screenPlayer = self.managePlayer(time, dt)
-        screenHPBar = self.hpStatusDraw()
+        self.moveShots(dt, time)
+        self.manageEnemies(time)
+        self.managePlayer(time, dt)
 
-        self.gameScene.childs = screenPlayer + screenShots + screenEnemies + screenHPBar
+    def getShipGraphNode(self, ship):
+        # Function to get the scene node of a ship
+        if ship.state == S_ALIVE:
+            return ship.sceneNode
+        elif ship.state == S_HIT:
+            # If the ship is hit, draw an explosion
+            explosion = sg.SceneGraphNode("dead_" + ship.sceneNode.name)
+            explosion.transform = tr.translate(ship.currentX, ship.currentY, 0.0)
+            explosion.childs = [self.explosionmodel]
+            return explosion
+        else:
+            return None
+
+    def getGameScene(self):
+        screenElements = []
+        for ship in [self.player]+self.enemies:
+            node = self.getShipGraphNode(ship)
+            if node is not None:
+                screenElements.append(node)
+        for i,eshot in enumerate(self.enemyShots):
+            if eshot.inScreen:
+                shot = sg.SceneGraphNode(f"EShot_{i}")
+                shot.transform = tr.translate(eshot.currentX,eshot.currentY,0.0)
+                shot.childs = [self.enemyShotModel]
+                screenElements.append(shot)
+        for i,pshot in enumerate(self.playerShots):
+            if pshot.inScreen:
+                shot = sg.SceneGraphNode(f"PShot_{i}")
+                shot.transform = tr.translate(pshot.currentX,pshot.currentY,0.0)
+                shot.childs = [self.playerShotModel]
+                screenElements.append(shot)
+        screenElements.append(self.hpStatusDraw())
+        self.gameScene.childs = screenElements
+        return self.gameScene
+        

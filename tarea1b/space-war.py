@@ -75,7 +75,7 @@ class ScreenDrawer:
         #Draw ships snd shots
         # Telling OpenGL to use our shader program
         glUseProgram(self.pipelineColor.shaderProgram)
-        sg.drawSceneGraphNode(self.gameModel.gameScene, self.pipelineColor, "transform")
+        sg.drawSceneGraphNode(self.gameModel.getGameScene(), self.pipelineColor, "transform")
 
     def drawEndScreen(self, time, screen):
         # End screen handling
