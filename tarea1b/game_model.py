@@ -16,6 +16,11 @@ S_ALIVE = 0
 S_HIT   = 1
 S_DEAD  = 2
 
+#Define game states
+G_ONGOING = 0
+G_WIN   = 1
+G_LOST  = 2
+
 # A class to manage a shot movement
 class Shot(object):
     speed = 0.9
@@ -180,7 +185,7 @@ class GameModel:
         self.enemies = []
 
         # Game status
-        self.gameover = False
+        self.state = G_ONGOING
         self.remainingEnemies = nEnemies
         self.wave = 0
         self.lastEnemyTimer = 0.0 #time of last enemy death
@@ -243,7 +248,11 @@ class GameModel:
     def manageEnemies(self, time):
         # Function to update enemies status
         if len(self.enemies) == 0:
-            self.spawnEnemies(time)
+            if self.remainingEnemies == 0:
+                self.state = G_WIN
+            else:
+                self.spawnEnemies(time)
+
         screenEnemies = []
         currentEnemies = []
         for i,enemy in enumerate(self.enemies):
@@ -289,7 +298,7 @@ class GameModel:
             # Player draw
             return [self.player.sceneNode]
         elif self.player.state == S_HIT:
-            self.gameover = True
+            self.state = G_LOST
             explosion = sg.SceneGraphNode("Dead_player")
             explosion.transform = tr.translate(self.player.currentX, self.player.currentY, 0.0)
             explosion.childs = [self.explosionmodel]
@@ -307,4 +316,3 @@ class GameModel:
         screenHPBar = self.hpStatusDraw()
 
         self.gameScene.childs = screenPlayer + screenShots + screenEnemies + screenHPBar
-        return self.gameScene

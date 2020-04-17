@@ -47,6 +47,57 @@ def on_key(window, key, scancode, action, mods):
     elif key == glfw.KEY_ESCAPE:
         sys.exit()
 
+class ScreenDrawer:
+    def __init__(self, gameModel, backgroundFile, gameoverFile, winFile):
+        # Reference to the game model
+        self.gameModel = gameModel
+        # Load background and gameover models
+        self.background = gs.create_background(backgroundFile)
+        self.gameoverScreen = gs.create_gameover_screen(gameoverFile)
+        self.winScreen = gs.create_gameover_screen(winFile)
+
+        # Define pipelines for drawing
+        self.pipelineTexture = es.SimpleTextureTransformShaderProgram()
+        self.pipelineColor = es.SimpleTransformShaderProgram()
+
+        # Trayectory animation for end screen
+        self.endTray = None
+        self.endScreen = None
+
+    def drawBackground(self, time):
+        #Draw the moving background
+        # Telling OpenGL to use our shader program for textures
+        glUseProgram(self.pipelineTexture.shaderProgram)
+        self.background.transform = tr.translate(0,(-time/4)%2,0)
+        sg.drawSceneGraphNode(self.background,self.pipelineTexture,"transform")
+
+    def drawGameElements(self):
+        #Draw ships snd shots
+        # Telling OpenGL to use our shader program
+        glUseProgram(self.pipelineColor.shaderProgram)
+        sg.drawSceneGraphNode(self.gameModel.gameScene, self.pipelineColor, "transform")
+
+    def drawEndScreen(self, time, screen):
+        # End screen handling
+        if self.endTray is None:
+            self.endTray = gu.LinearTrayectory(time, 2, 0.0, 2.0, 0.0, 0.0)
+        # Telling OpenGL to use our shader program for textures
+        glUseProgram(self.pipelineTexture.shaderProgram)
+        goX, goY = self.endTray.get_pos(time)
+        screen.transform = tr.translate(goX, goY, 0.0)
+        sg.drawSceneGraphNode(screen, self.pipelineTexture, "transform")
+
+    def drawScene(self, time):
+        # Draw elements in order
+        self.drawBackground(time)
+
+        self.drawGameElements()
+        
+        if self.gameModel.state == gm.G_LOST:
+            self.drawEndScreen(time, self.gameoverScreen)
+        if self.gameModel.state == gm.G_WIN:
+            self.drawEndScreen(time, self.winScreen)
+
 if __name__ == "__main__":
     # Parse game argument
     parser = argparse.ArgumentParser(description='Space-Wars game.')
@@ -80,18 +131,9 @@ if __name__ == "__main__":
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-    # A simple shader program with position and texture coordinates as inputs.
-    pipelineTexture = es.SimpleTextureTransformShaderProgram()
-
-    # A simple shader program with position and texture coordinates as inputs.
-    pipelineColor = es.SimpleTransformShaderProgram()
-    
-    background = gs.create_background("stars.png")
-    gameoverScreen = gs.create_gameover_screen("gameOver.png")
-    gameoverTray = gu.LinearTrayectory(0, 2, 0.0, 2.0, 0.0, 0.0)
-    drawGameOver = False
-
     gameModel = gm.GameModel(args.nEnemies, width, height, controller)
+
+    screenDrawer = ScreenDrawer(gameModel, "stars.png", "gameOver.png", "win.png")
     
     while not glfw.window_should_close(window):
         # Using GLFW to check for input events
@@ -102,28 +144,11 @@ if __name__ == "__main__":
 
         time = glfw.get_time()
 
-        #Draw background
-        # Telling OpenGL to use our shader program for textures
-        glUseProgram(pipelineTexture.shaderProgram)
-        background.transform = tr.translate(0,(-time/4)%2,0)
-        sg.drawSceneGraphNode(background,pipelineTexture,"transform")
+        # Update the game state
+        gameModel.updateScene(time)
 
-        #Draw ships
-        # Telling OpenGL to use our shader program
-        glUseProgram(pipelineColor.shaderProgram)
-        gameScene = gameModel.updateScene(time)
-        sg.drawSceneGraphNode(gameScene, pipelineColor, "transform")
-
-        # Game over screen handling
-        if gameModel.gameover and not drawGameOver:
-            drawGameOver = True
-            gameoverTray.ti = time
-        if drawGameOver:
-            # Telling OpenGL to use our shader program for textures
-            glUseProgram(pipelineTexture.shaderProgram)
-            goX, goY = gameoverTray.get_pos(time)
-            gameoverScreen.transform = tr.translate(goX, goY, 0.0)
-            sg.drawSceneGraphNode(gameoverScreen,pipelineTexture,"transform")
+        # Draw thw screen
+        screenDrawer.drawScene(time)
 
         # Once the render is done, buffers are swapped, showing only the complete scene.
         glfw.swap_buffers(window)
