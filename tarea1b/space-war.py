@@ -145,7 +145,7 @@ if __name__ == "__main__":
         time = glfw.get_time()
 
         # Update the game state
-        gameModel.updateScene(time)
+        gameModel.updateGame(time)
 
         # Draw thw screen
         screenDrawer.drawScene(time)

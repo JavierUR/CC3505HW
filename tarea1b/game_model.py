@@ -215,7 +215,7 @@ class GameModel:
                 return True
         return False
 
-    def moveShots(self, dt, time):
+    def moveShots(self, time, dt):
         # Function to move shots on the game and check hits
         currentPlayerShots = []
         currentEnemyShots = []
@@ -269,6 +269,7 @@ class GameModel:
                     shot.setVisual(self.enemyShotModel)
                     self.enemyShots.append(shot)
             elif enemy.state == S_HIT:
+                # Set explosion model
                 enemy.setVisual(self.explosionmodel)
             if enemy.state != S_DEAD:
                 currentEnemies.append(enemy)
@@ -290,7 +291,7 @@ class GameModel:
         return hpStatus
 
     def managePlayer(self, time, dt):
-        # Manage the player ship
+        # Method to manage the player ship
         # interaction
         self.player.update(time, dt)
         if self.player.state == S_ALIVE:
@@ -299,32 +300,25 @@ class GameModel:
                 shot = self.player.spawnShot(time)
                 shot.setVisual(self.playerShotModel)
                 self.playerShots.append(shot)
-            # Player draw
         elif self.player.state == S_HIT:
             self.player.setVisual(self.explosionmodel)
             self.state = G_LOST
 
-    def updateScene(self, time):
+    def updateGame(self, time):
+        # Method to update all the game state
         dt = time - self.ltime
         self.ltime = time
-        # Update game elements
-        self.moveShots(dt, time)
+        # Update each game elements
+        self.moveShots(time, dt)
         self.manageEnemies(time)
         self.managePlayer(time, dt)
 
-    def getShipGraphNode(self, ship):
-        # Function to get the scene node of a ship
-        if ship.state != S_DEAD:
-            return ship.sceneNode
-        else:
-            return None
-
     def getGameScene(self):
+        # Method to obtain scene graph with the current ships and shots in screen
         screenElements = []
         for ship in [self.player]+self.enemies:
-            node = self.getShipGraphNode(ship)
-            if node is not None:
-                screenElements.append(node)
+            if ship.state != S_DEAD:
+                screenElements.append(ship.sceneNode)
         for shot in self.enemyShots+self.playerShots:
             if shot.inScreen:
                 screenElements.append(shot.sceneNode)
