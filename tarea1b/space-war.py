@@ -49,7 +49,11 @@ def on_key(window, key, scancode, action, mods):
 
 class ScreenDrawer:
     def __init__(self, gameModel, backgroundFile, gameoverFile, winFile):
-        # Reference to the game model
+        # gameModel - GameModel instance
+        # backgroundFile - File path of background texture
+        # gameoverFile - File path of game over texture
+        # winFile - File path of the game win texture
+        # Reference to the game model instance
         self.gameModel = gameModel
         # Load background and gameover models
         self.background = gs.create_background(backgroundFile)
@@ -66,6 +70,7 @@ class ScreenDrawer:
 
     def drawBackground(self, time):
         #Draw the moving background
+        # time - current clock time in seconds
         # Telling OpenGL to use our shader program for textures
         glUseProgram(self.pipelineTexture.shaderProgram)
         self.background.transform = tr.translate(0,(-time/4)%2,0)
@@ -77,18 +82,21 @@ class ScreenDrawer:
         glUseProgram(self.pipelineColor.shaderProgram)
         sg.drawSceneGraphNode(self.gameModel.getGameScene(), self.pipelineColor, "transform")
 
-    def drawEndScreen(self, time, screen):
+    def drawEndScreen(self, time, endScreen):
         # End screen handling
+        # endScreen - end creen SceneGraphNode
+        # time - current clock time in seconds
         if self.endTray is None:
             self.endTray = gu.LinearTrayectory(time, 2, 0.0, 2.0, 0.0, 0.0)
         # Telling OpenGL to use our shader program for textures
         glUseProgram(self.pipelineTexture.shaderProgram)
         goX, goY = self.endTray.get_pos(time)
-        screen.transform = tr.translate(goX, goY, 0.0)
-        sg.drawSceneGraphNode(screen, self.pipelineTexture, "transform")
+        endScreen.transform = tr.translate(goX, goY, 0.0)
+        sg.drawSceneGraphNode(endScreen, self.pipelineTexture, "transform")
 
     def drawScene(self, time):
         # Draw elements in order
+        # time - current clock time in seconds
         self.drawBackground(time)
 
         self.drawGameElements()
@@ -147,7 +155,7 @@ if __name__ == "__main__":
         # Update the game state
         gameModel.updateGame(time)
 
-        # Draw thw screen
+        # Draw the screen
         screenDrawer.drawScene(time)
 
         # Once the render is done, buffers are swapped, showing only the complete scene.

@@ -24,6 +24,9 @@ G_LOST  = 2
 # A class to manage each game element visual node
 class GameElement:
     def __init__(self, name, x, y):
+        # name - Name of the element
+        # x - Start x position in game
+        # y - Start y position in game
         self.currentX = x
         self.currentY = y
         self.sceneNode = sg.SceneGraphNode(name)
@@ -31,6 +34,7 @@ class GameElement:
 
     def setVisual(self, visualModel):
         # Method to set the scene graph node model
+        # visualModel - SceneGraphNode of the element visual model
         self.sceneNode.childs = [visualModel]
 
     def updateVisualPos(self):
@@ -41,16 +45,22 @@ class GameElement:
 class Shot(GameElement):
     speed = 0.9
     def __init__(self, name, x, y):
+        # name - Name of the shot
+        # x - Start x position in game
+        # y - Start y position in game
         super().__init__(name, x, y)
         self.inScreen = True
 
 # Class for player shot
 class PlayerShot(Shot):
     def __init__(self, x, y):
+        # x - Start x position in game
+        # y - Start y position in game
         super().__init__(f"pshot_{x}_{y}", x, y)
 
     def updatePos(self, dt):
         # Update shot position. Player shots move up
+        # dt - Game frame time difference in seconds
         self.currentY += dt*self.speed
         self.updateVisualPos()
         self.inScreen = (self.currentY < 1.0)
@@ -58,10 +68,13 @@ class PlayerShot(Shot):
 # Class for enemy shot
 class EnemyShot(Shot):
     def __init__(self, x, y):
+        # x - Start x position in game
+        # y - Start y position in game
         super().__init__(f"eshot_{x}_{y}", x, y)
 
     def updatePos(self, dt):
         # Update shot position. Enemy shots move down
+        # dt - Game frame time difference in seconds
         self.currentY -= dt*self.speed
         self.updateVisualPos()
         self.inScreen = (self.currentY > -1.0)
@@ -74,6 +87,12 @@ class Ship(GameElement):
     firePeriod = 1.0
     
     def __init__(self, name, x, y, createTime, visualModel, hp):
+        # name - Name of the ship
+        # x - Start x position in game
+        # y - Start y position in game
+        # createTime - Ship creation time in seconds
+        # visualModel - SceneGraphNode of the ship visual model
+        # hp - Ship hitpoints
         super().__init__(name, x, y)
         self.setVisual(visualModel)
         #self.sceneNode.childs = [visualModel]
@@ -84,6 +103,7 @@ class Ship(GameElement):
 
     def manageHitState(self, time):
         # Function to manage ship explosion effect
+        # time - current clock time in seconds
         if self.state == S_HIT and (time-self.deathTime) > self.explosionTime:
             self.state = S_DEAD
 
@@ -96,6 +116,8 @@ class Ship(GameElement):
 
     def isHit(self, shot, time):
         # Function to verify if a shot hits the ship
+        # shot - Shot object
+        # time - current clock time in seconds
         if self.state == S_ALIVE and \
                 gu.checkHitbox(shot.currentX, shot.currentY,
                             self.currentX-self.shipHalfWidth, self.currentY+self.shipHalfHeight,
@@ -106,6 +128,7 @@ class Ship(GameElement):
 
     def canShoot(self, time):
         # Funtion to verify if the fire period passed
+        # time - current clock time in seconds
         if (time - self.lastShot) > self.firePeriod:
             return True
         else:
@@ -117,16 +140,22 @@ class Enemy(Ship):
     shipHalfWidth = 0.08
     shipHalfHeight = 0.04
     def __init__(self, name, x, y, time, trayectory, visualModel):
+        # name - Name of the ship
+        # x - Start x position in game
+        # y - Start y position in game
+        # visualModel - SceneGraphNode of the ship visual model
         super().__init__(name, x, y, time, visualModel, 1)
         self.trayectory = trayectory
 
     def spawnShot(self, time):
         # Spawn an enemy shot
+        # time - current clock time in seconds
         self.lastShot = time
         return EnemyShot(self.currentX, self.currentY - self.shipHalfHeight)
 
 
     def update(self,time):
+        # time - current clock time in seconds
         if self.state == S_ALIVE:
             # Update ship position
             self.currentX, self.currentY = self.trayectory.get_pos(time)
@@ -142,15 +171,23 @@ class Player(Ship):
     playerSpeed = 1.0
 
     def __init__(self, name, x, y, time, controller, visualModel):
+        # name - Name of the ship
+        # x - Start x position in game
+        # y - Start y position in game
+        # time - current clock time in seconds
+        # controller - Controller instance of the game
+        # visualModel - SceneGraphNode of the ship visual model
         super().__init__(name, x, y, time, visualModel, 3)
         self.controller = controller
 
     def spawnShot(self, time):
+        # time - current clock time in seconds
         # Spawn a player shot
         self.lastShot = time
         return PlayerShot(self.currentX, self.currentY + self.shipHalfHeight)
 
     def movePlayer(self, dt):
+        # dt - Game frame time difference in seconds
         # Change speed if moving in two axes
         if (self.controller.right or self.controller.left) and \
                 (self.controller.up or self.controller.down):
@@ -164,6 +201,8 @@ class Player(Ship):
         self.currentY = np.clip(self.currentY,-0.9,0.4)
 
     def update(self, time, dt):
+        # time - current clock time in seconds
+        # dt - Game frame time difference in seconds
         if self.state == S_ALIVE:
             # Update player position
             self.movePlayer(dt)
@@ -173,14 +212,19 @@ class Player(Ship):
 
 # A class to manage game state
 class GameModel:
-    def __init__(self, nEnemies, screenWidht, screenHeight, controller):
+    def __init__(self, nEnemies, screenWidth, screenHeight, controller):
+        # nenemies - Number of enemies to spawn
+        # screenWidth - Game screen width
+        # screenHeight - Game screen height
+        # controller - Controller instance of the game
+
         # Start clock
         self.ltime = 0.0
         # reference to the gaplayerme controller
 
         # Create game scene
         self.gameScene = sg.SceneGraphNode("gameScene")
-        self.gameScene.transform = tr.scale(screenHeight/ screenWidht, 1.0, 1.0)
+        self.gameScene.transform = tr.scale(screenHeight/ screenWidth, 1.0, 1.0)
 
         # Load game models
         enemyModel = gs.create_enemy((0.5, 0, 0.38), (0.0, 0.38, 0.5))
@@ -209,14 +253,18 @@ class GameModel:
         self.waitSpawn = False
 
     def checkEnemyHit(self, shot, time):
-        # Function to check if a shot hits any enemy 
+        # Function to check if a shot hits any 
+        # shot - A PlayerShot object
+        # time - current clock time in seconds 
         for enemy in self.enemies:
             if enemy.isHit(shot, time):
                 return True
         return False
 
     def moveShots(self, time, dt):
-        # Function to move shots on the game and check hits
+        # Function to move shots on the game and check
+        # time - current clock time in 
+        # dt - Game frame time difference in seconds
         currentPlayerShots = []
         currentEnemyShots = []
         for pshot in self.playerShots:
@@ -233,6 +281,8 @@ class GameModel:
         self.enemyShots = currentEnemyShots
 
     def spawnEnemies(self, time):
+        # time - current clock time in seconds
+        
         #Wait 1 second before new enemies
         if not self.waitSpawn:
             self.lastEnemyTimer = time
@@ -254,6 +304,7 @@ class GameModel:
 
     def manageEnemies(self, time):
         # Function to update enemies status
+        # time - current clock time in seconds
         if len(self.enemies) == 0:
             if self.remainingEnemies == 0:
                 self.state = G_WIN
@@ -292,6 +343,8 @@ class GameModel:
 
     def managePlayer(self, time, dt):
         # Method to manage the player ship
+        # time - current clock time in seconds
+        # dt - Game frame time difference in seconds
         # interaction
         self.player.update(time, dt)
         if self.player.state == S_ALIVE:
@@ -306,6 +359,7 @@ class GameModel:
 
     def updateGame(self, time):
         # Method to update all the game state
+        # time - current clock time in seconds
         dt = time - self.ltime
         self.ltime = time
         # Update each game elements

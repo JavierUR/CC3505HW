@@ -12,6 +12,7 @@ import basic_shapes as bs
 import scene_graph as sg
 
 def create_background(filename):
+    # filename - File path of background texture
     # Load background image
     gpuStars = es.toGPUShape(bs.createTextureQuad(filename), GL_REPEAT, GL_LINEAR)
 
@@ -30,6 +31,7 @@ def create_background(filename):
     return backgroundVertical
 
 def create_gameover_screen(filename):
+    # filename - File path of game over texture
     # Load background image
     gpuGameOver = es.toGPUShape(bs.createTextureQuad(filename), GL_REPEAT, GL_LINEAR)
 
@@ -65,6 +67,7 @@ def flame_shape():
     return flame
 
 def enemy_wing_shape(r,g,b):
+    # r,g,b - Red, green and blue values of the wing color
     # Defining locations and colors for each vertex of the shape    
     vertices = [
     #   positions        colors
@@ -107,6 +110,7 @@ def create_enemy(bodyColor, wingColor):
     return enemy
 
 def player_body_shape(r,g,b):
+    # r,g,b - Red, green and blue values of the body color
     # Defining locations and colors for each vertex of the shape    
     vertices = [
     #   positions        colors
@@ -122,6 +126,7 @@ def player_body_shape(r,g,b):
     return bs.Shape(vertices, indices)
 
 def player_lower_wing_shape(r,g,b):
+    # r,g,b - Red, green and blue values of the wing color
     # Defining locations and colors for each vertex of the shape    
     vertices = [
     #   positions        colors
@@ -137,6 +142,7 @@ def player_lower_wing_shape(r,g,b):
     return bs.Shape(vertices, indices)
 
 def player_upper_wing_shape(r,g,b):
+    # r,g,b - Red, green and blue values of the wing color
     # Defining locations and colors for each vertex of the shape    
     vertices = [
     #   positions        colors
@@ -185,6 +191,7 @@ def create_player():
     return player
 
 def create_shot(r,g,b):
+    # r,g,b - Red, green and blue values of the shot color
     gpuShot = es.toGPUShape(bs.createColorQuad(r,g,b))
 
     shot = sg.SceneGraphNode("shot")
