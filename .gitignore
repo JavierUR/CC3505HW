@@ -110,6 +110,7 @@ dmypy.json
 
 #vscode
 .vscode/
+*.code-workspace
 
 # graphviz
 *.dot
