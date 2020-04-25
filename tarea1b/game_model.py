@@ -129,16 +129,15 @@ class Ship(GameElement):
     def canShoot(self, time):
         # Funtion to verify if the fire period passed
         # time - current clock time in seconds
-        if (time - self.lastShot) > self.firePeriod:
-            return True
-        else:
-            return False
+        return (time - self.lastShot) > self.firePeriod
 
 # A class to manage each enemy
 class Enemy(Ship):
     firePeriod = 2.0
     shipHalfWidth = 0.08
     shipHalfHeight = 0.04
+    orbitRadius = 0.1
+    orbitSpeed = 1.5
     def __init__(self, name, x, y, time, trayectory, visualModel):
         # name - Name of the ship
         # x - Start x position in game
@@ -146,6 +145,7 @@ class Enemy(Ship):
         # visualModel - SceneGraphNode of the ship visual model
         super().__init__(name, x, y, time, visualModel, 1)
         self.trayectory = trayectory
+        self.orbitMovement = None
 
     def spawnShot(self, time):
         # Spawn an enemy shot
@@ -153,12 +153,26 @@ class Enemy(Ship):
         self.lastShot = time
         return EnemyShot(self.currentX, self.currentY - self.shipHalfHeight)
 
-
+    def updatePos(self, time):
+        # Update enemy ship position
+        # time - current clock time in seconds
+        if not self.trayectory.finished:
+            # Follow trayectory until finished
+            self.currentX, self.currentY = self.trayectory.get_pos(time)
+        else:
+            # Then orbit around the endpoint of the trayectory
+            if self.orbitMovement is None:
+                self.orbitMovement = gu.Orbit(center=self.currentX,
+                                              radius=self.orbitRadius,
+                                              speed=self.orbitSpeed,
+                                              time=time)
+            self.currentX = self.orbitMovement.get_pos(time)
+            
     def update(self,time):
         # time - current clock time in seconds
         if self.state == S_ALIVE:
             # Update ship position
-            self.currentX, self.currentY = self.trayectory.get_pos(time)
+            self.updatePos(time)
             self.updateVisualPos()
         elif self.state == S_HIT:
             self.manageHitState(time)

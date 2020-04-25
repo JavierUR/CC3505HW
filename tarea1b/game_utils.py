@@ -26,6 +26,7 @@ class Trayectory:
     def __init__(self, ti, dt):
         self.ti = ti
         self.dt = dt
+        self.finished = False
 
     def normalize_time(self, time):
         localTime = (time - self.ti) / self.dt
@@ -42,4 +43,19 @@ class LinearTrayectory(Trayectory):
 
     def get_pos(self, time):
         t = self.normalize_time(time)
+        if t >= 1.0:
+            self.finished = True
         return self.p1 + t*self.vect
+
+# Class to handle orbit movement
+class Orbit:
+    def __init__(self, center, radius, speed, time):
+        self.center = center
+        self.radius = radius
+        self.speed = speed
+        self.initTime = time
+
+    def get_pos(self, time):
+        localTime = time - self.initTime
+        return self.center + self.radius * np.sin(self.speed * localTime)
+
