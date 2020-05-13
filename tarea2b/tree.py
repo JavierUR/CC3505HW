@@ -26,7 +26,6 @@ class Controller:
 # we will use the global controller as communication with the callback function
 controller = Controller()
 
-
 def on_key(window, key, scancode, action, mods):
     global controller
 
@@ -58,29 +57,31 @@ class Branch:
         self.origin=origin
         self.end = end
         self.diameter = diameter
-    
+        # Calculate parameters and orientation vectors
+        self.length = np.sqrt(np.sum((self.end-self.origin)**2))
+        self.forward = (self.end - self.origin)/self.length
+        
     def get_transform(self):
         # Asumes shape of dimension 1 in every axis and centered in origin
-        length = np.sqrt(np.sum((self.end-self.origin)**2))
-        scale = tr.scale(self.diameter, self.diameter, length)
+        scale = tr.scale(self.diameter, self.diameter, self.length)
 
         # Create rotation matrix
-        forward = (self.end - self.origin)/length
-        vy = np.array([-forward[2],forward[0],forward[1]])
-        z = np.cross(forward,vy)
+        
+        vy = np.array([self.forward[2],self.forward[0],self.forward[1]])
+        z = np.cross(self.forward,vy)
         up = z/np.linalg.norm(z)
-        y = np.cross(up, forward)
+        y = np.cross(up, self.forward)
         side = y/np.linalg.norm(y)
         
         traslation = (self.origin+self.end)/2
         look = np.array([
-            [side[0],       side[1],    side[2], traslation[0]],
-            [up[0],     up[1],   up[2], traslation[1]],
-            [forward[0], forward[1], forward[2], traslation[2]],
+            [up[0],       side[0],    self.forward[0], traslation[0]],
+            [up[1],     side[1],   self.forward[1], traslation[1]],
+            [up[2], side[2], self.forward[2], traslation[2]],
             [0,0,0,1]
             ], dtype = np.float32)
 
-        return tr.matmul([look, scale])
+        return tr.matmul([ look, scale])
 
 class FractalTree3D:
     def __init__(self, height, split_ang, split_n, decr, rec_level, sides_n, base_diameter, origin=(0,0,0), direction=(0,0,1)):
@@ -157,7 +158,7 @@ if __name__ == "__main__":
     glEnable(GL_DEPTH_TEST)
 
     # Create a tree
-    tree = FractalTree3D(height=1.0, split_ang=np.pi/3, split_n=1, decr=0.8, rec_level=0, sides_n=3, base_diameter=0.3)
+    tree = FractalTree3D(height=1.0, split_ang=np.pi/3, split_n=2, decr=1, rec_level=2, sides_n=3, base_diameter=0.05)
     # branch model
     branch_model = es.toGPUShape(bs.createColorNormalsCube(0.59,0.29,0.00))
     tree_model = get_tree_model(tree, branch_model)
