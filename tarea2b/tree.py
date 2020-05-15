@@ -60,13 +60,14 @@ def on_key(window, key, scancode, action, mods):
         print('Unknown key')
 
 class Branch:
-    def __init__(self, origin, end, diameter):
+    def __init__(self, origin, end, side, diameter):
         self.origin=origin
         self.end = end
         self.diameter = diameter
         # Calculate parameters and orientation vectors
         self.length = np.sqrt(np.sum((self.end-self.origin)**2))
         self.forward = (self.end - self.origin)/self.length
+        self.side = side
         
     def get_transform(self):
         # Asumes shape of dimension 1 in every axis and centered in origin
@@ -74,38 +75,42 @@ class Branch:
 
         # Create rotation matrix
         
-        vy = np.array([self.forward[2],self.forward[0],self.forward[1]])
-        z = np.cross(self.forward,vy)
-        up = z/np.linalg.norm(z)
-        y = np.cross(up, self.forward)
-        side = y/np.linalg.norm(y)
+        up = np.cross(self.forward,self.side)
+        up = up/np.linalg.norm(up)
         
         traslation = (self.origin+self.end)/2
         look = np.array([
-            [up[0],       side[0],    self.forward[0], traslation[0]],
-            [up[1],     side[1],   self.forward[1], traslation[1]],
-            [up[2], side[2], self.forward[2], traslation[2]],
+            [up[0],       self.side[0],    self.forward[0], traslation[0]],
+            [up[1],     self.side[1],   self.forward[1], traslation[1]],
+            [up[2], self.side[2], self.forward[2], traslation[2]],
             [0,0,0,1]
             ], dtype = np.float32)
 
         return tr.matmul([ look, scale])
 
 class FractalTree3D:
-    def __init__(self, height, split_ang, split_n, decr, rec_level, sides_n, base_diameter, origin=(0,0,0), direction=(0,0,1)):
+    def __init__(self, height, split_ang, split_n, decr, rec_level, sides_n, 
+                base_diameter, origin=(0,0,0), direction=(0,0,1), side=(0,1,0)):
         self.childs=[]
         # Length of first segment h=l+decr*l+decr^2*l...
         seg_length = height/np.sum([decr**i for i in range(split_n)])
-        direction = np.array(direction)
+        # normalize direction and side vectors
+        direction = np.array(direction)/np.linalg.norm(direction)
+        up = np.cross(side, direction)
+        side = np.cross(direction, up)
+        side = side/np.linalg.norm(side)
+        # Create branches
         branch_origin = np.array(origin)
         branch_end = branch_origin + seg_length*direction
         for i in range(split_n-1):
-            self.childs.append(Branch(branch_origin,branch_end, base_diameter))
+            self.childs.append(Branch(branch_origin,branch_end, side, base_diameter))
             seg_length = decr*seg_length # Lenght of following segments
             if rec_level > 0: # Add lateral branches
-                rotM1 = tr.rotationA(split_ang, np.cross(direction, np.array([1,0,0])))
+                rotM1 = tr.rotationA(split_ang, side)
                 branch_rot = 2*np.pi/sides_n
                 rotM2 = tr.rotationA(branch_rot, direction)
                 branch_dir = np.matmul(direction,rotM1[:3,:3])
+                branch_side = np.matmul(side,rotM1[:3,:3])
                 for j in range(sides_n):
                     self.childs.append(FractalTree3D(seg_length, 
                                                     split_ang, 
@@ -114,11 +119,13 @@ class FractalTree3D:
                                                     rec_level-1, 
                                                     sides_n,
                                                     base_diameter*0.5,
-                                                    branch_end, branch_dir))
+                                                    branch_end, 
+                                                    branch_dir, branch_side))
                     branch_dir = np.matmul(branch_dir, rotM2[:3,:3])
+                    branch_side = np.matmul(branch_side, rotM2[:3,:3])
             branch_origin = branch_end
             branch_end = branch_origin + seg_length*direction
-        self.childs.append(Branch(branch_origin, branch_end, base_diameter))
+        self.childs.append(Branch(branch_origin, branch_end, side, base_diameter))
 
 def get_tree_model(tree: FractalTree3D, branch_model: es.GPUShape):
     tree_sg = sg.SceneGraphNode("tree")
@@ -149,7 +156,7 @@ if __name__ == "__main__":
         sys.exit()
 
     print(HELP_TEXT)
-    
+
     glfw.make_context_current(window)
 
     # Connecting the callback function 'on_key' to handle keyboard events
@@ -167,7 +174,7 @@ if __name__ == "__main__":
     glEnable(GL_DEPTH_TEST)
 
     # Create a tree
-    tree = FractalTree3D(height=1.0, split_ang=np.pi/3, split_n=2, decr=1, rec_level=2, sides_n=3, base_diameter=0.05)
+    tree = FractalTree3D(height=1.0, split_ang=np.pi/3, split_n=2, decr=1, rec_level=2, sides_n=4, base_diameter=0.05)
     # branch model
     branch_model = es.toGPUShape(bs.createColorNormalsCube(0.59,0.29,0.00))
     tree_model = get_tree_model(tree, branch_model)
