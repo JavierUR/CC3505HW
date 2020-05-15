@@ -12,6 +12,13 @@ import scene_graph as sg
 import easy_shaders as es
 import lighting_shaders as ls
 
+HELP_TEXT = """
+SPACE: toggle fill or line mode
+ENTER: toggle axis
+ARROW UP/DOWN: move camera up or down
+ARROW LEFT/RIGHT: move camera left or right
+"""
+
 # A class to store the application control
 class Controller:
     def __init__(self):
@@ -141,6 +148,8 @@ if __name__ == "__main__":
         glfw.terminate()
         sys.exit()
 
+    print(HELP_TEXT)
+    
     glfw.make_context_current(window)
 
     # Connecting the callback function 'on_key' to handle keyboard events
@@ -169,7 +178,8 @@ if __name__ == "__main__":
     projection = tr.perspective(45, float(width)/float(height), 0.1, 100)
     
     camera_theta = 0.0
-    cam_z = 3
+    camera_phi = np.pi/4
+    camera_r = 3
     ltime = 0
     
     while not glfw.window_should_close(window):
@@ -179,10 +189,13 @@ if __name__ == "__main__":
         dt = time-ltime
         ltime = time
         camera_theta += 2.0*dt*(controller.right - controller.left)
+        camera_phi += 2.0*dt*(controller.up - controller.down)
+        camera_phi = np.clip(camera_phi, 0+0.00001, np.pi/2) # view matrix is NaN when phi=0
         #cam_y += 2.0*dt*(controller.up - controller.down)
 
-        cam_x = 3 * np.sin(camera_theta)
-        cam_y = 3 * np.cos(camera_theta)
+        cam_x = camera_r * np.sin(camera_phi) * np.sin(camera_theta)
+        cam_y = camera_r * np.sin(camera_phi) * np.cos(camera_theta)
+        cam_z = camera_r * np.cos(camera_phi)
 
         viewPos = np.array([cam_x,cam_y,cam_z])
 
