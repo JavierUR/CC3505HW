@@ -4,6 +4,7 @@ import glfw
 from OpenGL.GL import *
 import OpenGL.GL.shaders
 
+import argparse
 import numpy as np
 
 import transformations as tr
@@ -160,17 +161,43 @@ def get_tree_model(tree: FractalTree3D, branch_shape: ob.OBJModel) -> ob.OBJMode
     return tree_model
 
 if __name__ == "__main__":
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='3D fractal tree generator.')
+    parser.add_argument('filename', metavar='Filename', type=str,
+                    help='Name for the generated model file')
+    parser.add_argument('split_ang', metavar='Angle', type=float,
+                    help='Angle of branch separation in degrees')
+    parser.add_argument('split_n', metavar='Separations', type=int,
+                    help='Number of separation in the tree')
+    parser.add_argument('decr', metavar='Decrement', type=float,
+                    help='Percentage to make the branches smaller as the tree grows up')
+    parser.add_argument('rec_level', metavar='Depth', type=int,
+                    help='Depth or recursion level of the tree branches')
+    parser.add_argument('sides_n', metavar='Sides', type=int,
+                    help='Number of braches at the sides of the tree. (Minimum 1)')
+    parser.add_argument('base_diameter', metavar='Diameter', type=float,
+                    help='Tree trunk diameter')
+    args = parser.parse_args()
+
+    assert(args.split_n > 0)
+    assert(0.0 <= args.decr<= 1.0)
+    assert(args.rec_level >= 0)
+    assert(args.sides_n > 1)
+    assert(args.base_diameter > 0)
+    
     # Initialize glfw
     if not glfw.init():
         sys.exit()
 
     print("Generating tree ...")
     # Create a tree
-    tree = FractalTree3D(height=1.0, split_ang=np.pi/3, split_n=2, decr=0.85, rec_level=2, sides_n=5, base_diameter=0.05)
+    tree = FractalTree3D(height=1.0, split_ang=np.deg2rad(args.split_ang), 
+                        split_n=args.split_n, decr=args.decr, rec_level=args.rec_level, 
+                        sides_n=args.sides_n, base_diameter=args.base_diameter)
     # branch model
     branch_model = ob.cubeOBJ()
     tree_obj = get_tree_model(tree, branch_model)
-    tree_obj.to_file("tree.obj")
+    tree_obj.to_file(args.filename)
 
     print("Tree ready!")
 
