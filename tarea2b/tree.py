@@ -12,6 +12,8 @@ import scene_graph as sg
 import easy_shaders as es
 import lighting_shaders as ls
 
+import obj_model as ob
+
 HELP_TEXT = """
 SPACE: toggle fill or line mode
 ENTER: toggle axis
@@ -127,13 +129,13 @@ class FractalTree3D:
             branch_end = branch_origin + seg_length*direction
         self.childs.append(Branch(branch_origin, branch_end, side, base_diameter))
 
-def get_tree_model(tree: FractalTree3D, branch_model: es.GPUShape):
+def get_tree_model_sg(tree: FractalTree3D, branch_model: es.GPUShape):
     tree_sg = sg.SceneGraphNode("tree")
     tree_sg.childs = []
 
     for child in tree.childs:
         if isinstance(child, FractalTree3D):
-            tree_sg.childs.append(get_tree_model(child, branch_model))
+            tree_sg.childs.append(get_tree_model_sg(child, branch_model))
         else:
             branch = sg.SceneGraphNode("branch")
             branch.transform = child.get_transform()
@@ -141,10 +143,35 @@ def get_tree_model(tree: FractalTree3D, branch_model: es.GPUShape):
             tree_sg.childs.append(branch)
     return tree_sg
 
+def get_tree_model(tree: FractalTree3D, branch_shape: ob.OBJModel) -> ob.OBJModel:
+    obj_list = []
+
+    for child in tree.childs:
+        if isinstance(child, FractalTree3D):
+            obj_list.append(get_tree_model(child, branch_model))
+        else:
+            t_M = child.get_transform()
+            obj_list.append(branch_model.transform(t_M))
+
+    tree_model = obj_list[0].join(obj_list[1])
+    for i in range(2,len(obj_list)):
+        tree_model = tree_model.join(obj_list[i])
+    
+    return tree_model
+
 if __name__ == "__main__":
     # Initialize glfw
     if not glfw.init():
         sys.exit()
+
+    print("Generating tree ...")
+    # Create a tree
+    tree = FractalTree3D(height=1.0, split_ang=np.pi/3, split_n=4, decr=0.85, rec_level=3, sides_n=5, base_diameter=0.05)
+    # branch model
+    branch_model = ob.cubeOBJ()
+    tree_obj = get_tree_model(tree, branch_model)
+
+    print("Tree ready!")
 
     width = 600
     height = 600
@@ -173,12 +200,13 @@ if __name__ == "__main__":
     # and which one is at the back
     glEnable(GL_DEPTH_TEST)
 
-    # Create a tree
-    tree = FractalTree3D(height=1.0, split_ang=np.pi/3, split_n=2, decr=1, rec_level=2, sides_n=4, base_diameter=0.05)
-    # branch model
-    branch_model = es.toGPUShape(bs.createColorNormalsCube(0.59,0.29,0.00))
-    tree_model = get_tree_model(tree, branch_model)
-
+    # Generate tree gpu shape
+    tree_shape = tree_obj.to_shape((0.59,0.29,0.00))
+    #tree_gpu = es.toGPUShape(tree_obj.to_shape((0.59,0.29,0.00)))
+    tree_gpu = es.toGPUShape(tree_shape)
+    tree_model = sg.SceneGraphNode("tree")
+    tree_model.childs = [tree_gpu
+    ]
     gpuAxis = es.toGPUShape(bs.createAxis(7))
 
     # Using the same view and projection matrices in the whole application
@@ -195,8 +223,8 @@ if __name__ == "__main__":
         time = glfw.get_time()
         dt = time-ltime
         ltime = time
-        camera_theta += 2.0*dt*(controller.right - controller.left)
-        camera_phi += 2.0*dt*(controller.up - controller.down)
+        camera_theta -= 2.0*dt*(controller.right - controller.left)
+        camera_phi -= 2.0*dt*(controller.up - controller.down)
         camera_phi = np.clip(camera_phi, 0+0.00001, np.pi/2) # view matrix is NaN when phi=0
         #cam_y += 2.0*dt*(controller.up - controller.down)
 
@@ -240,8 +268,6 @@ if __name__ == "__main__":
         glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Ka"), 0.2, 0.2, 0.2)
         glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Kd"), 0.9, 0.5, 0.5)
         glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Ks"), 1.0, 1.0, 1.0)
-
-        # TO DO: Explore different parameter combinations to understand their effect!
 
         glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "lightPosition"), -5, -5, 5)
         glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "viewPosition"), viewPos[0], viewPos[1], viewPos[2])
