@@ -166,10 +166,11 @@ if __name__ == "__main__":
 
     print("Generating tree ...")
     # Create a tree
-    tree = FractalTree3D(height=1.0, split_ang=np.pi/3, split_n=4, decr=0.85, rec_level=3, sides_n=5, base_diameter=0.05)
+    tree = FractalTree3D(height=1.0, split_ang=np.pi/3, split_n=2, decr=0.85, rec_level=2, sides_n=5, base_diameter=0.05)
     # branch model
     branch_model = ob.cubeOBJ()
     tree_obj = get_tree_model(tree, branch_model)
+    tree_obj.to_file("tree.obj")
 
     print("Tree ready!")
 

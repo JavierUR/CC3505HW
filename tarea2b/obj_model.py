@@ -11,7 +11,17 @@ class OBJModel(object):
         self.faces = faces
 
     def to_file(self, file_name:str):
-        pass
+        with open(file_name, 'w') as f:
+            f.write("# Generated tree OBJ model\n")
+            f.write("# Vertices\n")
+            for vertex in self.vertices:
+                f.write(f"v {vertex[0]} {vertex[1]} {vertex[2]}\n")
+            f.write("# Normals\n")
+            for normal in self.normals:
+                f.write(f"vn {normal[0]} {normal[1]} {normal[2]}\n")
+            f.write("# Faces\n")
+            for face in self.faces:
+                f.write(f"f {face[0][0]}//{face[0][2]} {face[1][0]}//{face[1][2]} {face[2][0]}//{face[2][2]}\n")
 
     def to_shape(self, color):
         vertex_data = []
@@ -88,7 +98,7 @@ def cubeOBJ():
         ]
     
     normals = [
-    #   positions         colors   normals
+    #normals
     # Z+
         [0,0,1],
 
