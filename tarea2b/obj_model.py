@@ -71,9 +71,10 @@ class OBJModel(object):
         new_vertices = np.matmul(M,new_vertices).squeeze()[:,:3]
 
          # normals to numpy array
-        new_normals = np.array(self.normals)[:,:,np.newaxis]
-        # Transform normals without translation
-        new_normals = np.matmul(M[:3,:3], new_normals).squeeze()
+        new_normals = np.column_stack([self.normals, np.ones(len(self.normals))])[:,:,np.newaxis]
+        # Transform normals
+        G = np.linalg.inv(M).transpose()
+        new_normals = np.matmul(G, new_normals).squeeze()[:,:3]
         # normalize
         norm = np.linalg.norm(new_normals, axis=1)
         new_normals = (new_normals.transpose()/norm).transpose()
