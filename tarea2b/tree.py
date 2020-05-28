@@ -149,14 +149,14 @@ def get_tree_model(tree: FractalTree3D, branch_shape: ob.OBJModel) -> ob.OBJMode
 
     for child in tree.childs:
         if isinstance(child, FractalTree3D):
-            obj_list.append(get_tree_model(child, branch_model))
+            obj_list.append(get_tree_model(child, branch_shape))
         else:
             t_M = child.get_transform()
-            obj_list.append(branch_model.transform(t_M))
+            obj_list.append(branch_shape.transform(t_M))
 
-    tree_model = obj_list[0].join(obj_list[1])
-    for i in range(2,len(obj_list)):
-        tree_model = tree_model.join(obj_list[i])
+    tree_model = obj_list[0]
+    for i in range(1,len(obj_list)):
+        tree_model.join(obj_list[i])
     
     return tree_model
 
