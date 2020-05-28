@@ -204,7 +204,7 @@ if __name__ == "__main__":
     width = 600
     height = 600
 
-    window = glfw.create_window(width, height, "3D cars via scene graph", None, None)
+    window = glfw.create_window(width, height, "Tree Generator", None, None)
 
     if not window:
         glfw.terminate()
