@@ -73,15 +73,19 @@ def create_terrain(width, lenght, spu, fz):
     vertices = []
     normals = []
     faces = []
+    # Constants for normal aproximation
+    dw2 = dw/2
+    dl2 = dl/2
 
     for i in range(w_n):
+        w = w0 + i*dw
         for j in range(l_n):
-            w = w0 + i*dw
             l = l0 + j*dl
             vertices.append([w, l, fz(w,l)])
             # Aproximate normal of vertex by fz
-            dfdw = (fz(w+dw,l) - fz(w-dw,l))/(2*dw)
-            dfdl = (fz(w,l+dl) - fz(w,l-dl))/(2*dl)
+            # using centered difference
+            dfdw = (fz(w+dw2,l) - fz(w-dw2,l))/(dw)
+            dfdl = (fz(w,l+dl2) - fz(w,l-dl2))/(dl)
             n = np.array([-dfdw,-dfdl,1])
             n = n/np.linalg.norm(n)
             normals.append(n.tolist())
