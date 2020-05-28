@@ -50,19 +50,20 @@ class OBJModel(object):
         return Shape(vertex_data, indices)
 
     def join(self, model: 'OBJModel') -> 'OBJModel':
-        new_vertices = self.vertices + model.vertices
-        new_normals = self.normals + model.normals
         n_vertices = len(self.vertices)
         n_normals = len(self.normals)
+        # Join vertices and normals
+        self.vertices += model.vertices
+        self.normals += model.normals
 
+        # Update indexes
         temp_faces = copy.deepcopy(model.faces)
         for face in temp_faces:
             for i in range(3):
                 face[i][0] += n_vertices
                 face[i][2] += n_normals
-        new_faces = copy.deepcopy(self.faces) + temp_faces
-
-        return OBJModel(new_vertices, new_normals, new_faces)
+        # Join faces
+        self.faces += temp_faces
 
     def transform(self, M) -> 'OBJModel':
         # Add dimension to vertices
