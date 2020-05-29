@@ -150,7 +150,8 @@ def populateForest(width, lenght, fz, treeGPUModels, tree_den):
     for i in range(len(locations)):
         tree_node = sg.SceneGraphNode("tree")
         x, y = locations[i]
-        tree_node.transform = tr.matmul([tr.translate(x, y, fz(x,y)),scale])
+        z = fz(x,y) - 0.03 # Lower to avoid floating trees
+        tree_node.transform = tr.matmul([tr.translate(x, y, z),scale])
         model = i%len(treeGPUModels)
         tree_node.childs = [treeGPUModels[model]]
         forest_trees.childs.append(tree_node)
@@ -158,16 +159,18 @@ def populateForest(width, lenght, fz, treeGPUModels, tree_den):
 
 # A class to create a gaussian function
 class Gaussian:
-    def __init__(self, x0, y0, stdx, stdy):
+    def __init__(self, x0, y0, stdx, stdy, sign):
         # x0 - Gaussian center x position
         # y0 - Gaussian center y position
         # stdx - x coordinate standard deviation
         # stdy - y coordinate standard deviation
+        # sign - (Bool) positive or negative gaussian
         self.x0 = x0
         self.y0 = y0
         self.stdx = stdx
         self.stdy = stdy
         self.const = 1/(2*np.pi*stdx*stdy)
+        self.sign = -1 if sign else 1
     
     def __call__(self,x,y):
         # x - x position
@@ -175,9 +178,25 @@ class Gaussian:
         # return - Gaussian value at x,y
         mx = ((x-self.x0)/self.stdx)**2
         my = ((y-self.y0)/self.stdy)**2
-        return self.const*np.exp(-0.5*(mx+my))
+        return self.sign*self.const*np.exp(-0.5*(mx+my))
+
+def generate_random_terrain_fun():
+    # Creaete a random terrain height function by  the sum
+    # of three gaussians
+    # return - Lambda function f(x,y) -> z
+    gaussians = []
+    for _ in range(3):
+        x0 = -1.5 + 3*np.random.random()
+        y0 = -1.5 + 3*np.random.random()
+        stdx = 0.2 + 1.3*np.random.random()
+        stdy = 0.2 + 1.3*np.random.random()
+        sign = np.random.randint(0,2)
+        gaussians.append(Gaussian(x0,y0,stdx,stdy,sign))
+    return lambda x,y: gaussians[0](x,y) + gaussians[1](x,y) + \
+                        gaussians[2](x,y)
 
 if __name__ == "__main__":
+    np.random.seed(0) 
     # Initialize glfw
     if not glfw.init():
         sys.exit()
@@ -220,10 +239,8 @@ if __name__ == "__main__":
     ltime = 0
 
     # Create forest terrain
-    g1 = Gaussian(0,0,1,1)
-    g2 = Gaussian(1,1,0.5,2)
-    fz = lambda x,y: g1(x,y) + g2(x,y)
-    terrain = create_terrain(4, 4, 4,fz)
+    fz = generate_random_terrain_fun()
+    terrain = create_terrain(width=4, lenght=4, spu=7, fz=fz)
     terrain_node = sg.SceneGraphNode("terrain_node")
     terrain_node.childs = [es.toGPUShape(terrain.to_shape((0,0.4,0.4)))]
 
