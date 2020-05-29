@@ -156,7 +156,26 @@ def populateForest(width, lenght, fz, treeGPUModels, tree_den):
         forest_trees.childs.append(tree_node)
     return forest_trees
 
-
+# A class to create a gaussian function
+class Gaussian:
+    def __init__(self, x0, y0, stdx, stdy):
+        # x0 - Gaussian center x position
+        # y0 - Gaussian center y position
+        # stdx - x coordinate standard deviation
+        # stdy - y coordinate standard deviation
+        self.x0 = x0
+        self.y0 = y0
+        self.stdx = stdx
+        self.stdy = stdy
+        self.const = 1/(2*np.pi*stdx*stdy)
+    
+    def __call__(self,x,y):
+        # x - x position
+        # y - y position
+        # return - Gaussian value at x,y
+        mx = ((x-self.x0)/self.stdx)**2
+        my = ((y-self.y0)/self.stdy)**2
+        return self.const*np.exp(-0.5*(mx+my))
 
 if __name__ == "__main__":
     # Initialize glfw
@@ -201,7 +220,9 @@ if __name__ == "__main__":
     ltime = 0
 
     # Create forest terrain
-    fz = lambda x,y: 1/(2*np.pi)*np.exp(-(x**2+y**2)/2)
+    g1 = Gaussian(0,0,1,1)
+    g2 = Gaussian(1,1,0.5,2)
+    fz = lambda x,y: g1(x,y) + g2(x,y)
     terrain = create_terrain(4, 4, 4,fz)
     terrain_node = sg.SceneGraphNode("terrain_node")
     terrain_node.childs = [es.toGPUShape(terrain.to_shape((0,0.4,0.4)))]
