@@ -125,18 +125,18 @@ def cubeOBJ():
 
     faces = [
     #   vertex texture normal
-        [[1,None,1],[2,None,1],[3,None,1]], #Z+
-        [[3,None,1],[4,None,1],[1,None,1]], #Z+
-        [[8,None,2],[7,None,2],[6,None,2]], #Z-
+        [[3,None,1],[2,None,1],[1,None,1]], #Z+
+        [[1,None,1],[4,None,1],[3,None,1]], #Z+
         [[6,None,2],[7,None,2],[8,None,2]], #Z-
-        [[6,None,3],[7,None,3],[3,None,3]], #X+
-        [[3,None,3],[2,None,3],[6,None,3]], #X+
-        [[1,None,4],[4,None,4],[8,None,4]], #X-
-        [[8,None,4],[5,None,4],[1,None,4]], #X-
-        [[4,None,5],[3,None,5],[7,None,5]], #Y+
-        [[7,None,5],[8,None,5],[4,None,5]], #Y+
-        [[5,None,6],[6,None,6],[2,None,6]], #Y-
-        [[2,None,6],[1,None,6],[5,None,6]], #Y-
+        [[8,None,2],[5,None,2],[6,None,2]], #Z-
+        [[3,None,3],[7,None,3],[6,None,3]], #X+
+        [[6,None,3],[2,None,3],[3,None,3]], #X+
+        [[8,None,4],[4,None,4],[1,None,4]], #X-
+        [[1,None,4],[5,None,4],[8,None,4]], #X-
+        [[7,None,5],[3,None,5],[4,None,5]], #Y+
+        [[4,None,5],[8,None,5],[7,None,5]], #Y+
+        [[2,None,6],[6,None,6],[5,None,6]], #Y-
+        [[5,None,6],[1,None,6],[2,None,6]], #Y-
     ]
 
     return OBJModel(vertices, normals, faces)
