@@ -78,7 +78,7 @@ class Branch:
 
         # Create rotation matrix
         
-        up = np.cross(self.forward,self.side)
+        up = np.cross(self.side,self.forward)
         up = up/np.linalg.norm(up)
         
         traslation = (self.origin+self.end)/2
