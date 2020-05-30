@@ -195,7 +195,7 @@ if __name__ == "__main__":
                         split_n=args.split_n, decr=args.decr, rec_level=args.rec_level, 
                         sides_n=args.sides_n, base_diameter=args.base_diameter)
     # branch model
-    branch_model = ob.cubeOBJ()
+    branch_model = ob.cilinderOBJ(num_sides=8)
     tree_obj = get_tree_model(tree, branch_model)
     tree_obj.to_file(args.filename)
 

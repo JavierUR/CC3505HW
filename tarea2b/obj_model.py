@@ -143,8 +143,55 @@ def cubeOBJ():
 
     
 
-def cilinderOBJ():
-    pass
+def cilinderOBJ(num_sides: int):
+    # Create a cilinder OBJ model
+    assert(num_sides>2)
+    angles = np.linspace(0,2*np.pi,num_sides+1)[:-1]
+    vertices_up = []
+    vertices_down = []
+    normals = [
+    #normals
+    # Z+
+        [0,0,1],
+    # Z-
+        [0,0,-1]
+    ]
+    faces = []
+    # Create sides
+    for i in range(num_sides):
+        # Create up and down vertices
+        x = np.cos(angles[i])
+        y = np.sin(angles[i])
+        vertices_up.append([0.5*x, 0.5*y, 0.5])
+        vertices_down.append([0.5*x, 0.5*y, -0.5])
+        # Add normal
+        normals.append([x, y, 0])
+        # Create lateral faces
+        j = i + 1
+        j_next = (i+1)%num_sides + 1
+        k = j+num_sides
+        k_next = j_next + num_sides
+        faces.append(
+            [[j,None,j+2],[k,None,j+2],[j_next,None,j_next+2]],
+        )
+        faces.append(
+            [[j_next,None,j_next+2],[k,None,j+2],[k_next,None,j_next+2]],
+        )
+    vertices = vertices_up + vertices_down
+    # create up/down faces
+    for i in range(num_sides-2):
+        # Z+ circle
+        j = i+1
+        faces.append(
+            [[1,None,1],[j+1,None,1],[j+2,None,1]]
+        )
+        # Z- circle
+        k = j+num_sides
+        faces.append(
+            [[k+2,None,2],[k+1,None,2],[num_sides+1,None,2]]
+        )
+
+    return OBJModel(vertices, normals, faces)
 
 def leafOBJ():
     # Defining the location of each vertex  of the shape
