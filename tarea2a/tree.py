@@ -90,6 +90,25 @@ class Branch:
             ], dtype = np.float32)
 
         return tr.matmul([ look, scale])
+    
+    def get_leaf_transform(self):
+        # Asumes shape of dimension 1 in every axis and centered in origin
+        scale = tr.scale(8*self.diameter, 8*self.diameter, self.length)
+
+        # Create rotation matrix
+        
+        up = np.cross(self.side,self.forward)
+        up = up/np.linalg.norm(up)
+        
+        traslation = self.end
+        look = np.array([
+            [up[0],       self.side[0],    self.forward[0], traslation[0]],
+            [up[1],     self.side[1],   self.forward[1], traslation[1]],
+            [up[2], self.side[2], self.forward[2], traslation[2]],
+            [0,0,0,1]
+            ], dtype = np.float32)
+
+        return tr.matmul([ look, scale])
 
 class FractalTree3D:
     def __init__(self, height, split_ang, split_n, decr, rec_level, sides_n, 
@@ -144,21 +163,31 @@ def get_tree_model_sg(tree: FractalTree3D, branch_model: es.GPUShape):
             tree_sg.childs.append(branch)
     return tree_sg
 
-def get_tree_model(tree: FractalTree3D, branch_shape: ob.OBJModel) -> ob.OBJModel:
-    obj_list = []
+def get_tree_model(tree: FractalTree3D, branch_model: ob.OBJModel,
+                    leaf_model: ob.OBJModel) -> ob.OBJModel:
+    branches_list = []
+    leaf_list = []
 
     for child in tree.childs:
         if isinstance(child, FractalTree3D):
-            obj_list.append(get_tree_model(child, branch_shape))
+            branches, leaves = get_tree_model(child, branch_model, leaf_model)
+            branches_list.append(branches)
+            leaf_list.append(leaves)
         else:
             t_M = child.get_transform()
-            obj_list.append(branch_shape.transform(t_M))
+            branches_list.append(branch_model.transform(t_M))
+            if len(tree.childs) == 1: # Last recursion level
+                l_M = child.get_leaf_transform()
+                leaf_list.append(leaf_model.transform(l_M))
 
-    tree_model = obj_list[0]
-    for i in range(1,len(obj_list)):
-        tree_model.join(obj_list[i])
+    tree_model = branches_list[0]
+    leaves_model = leaf_list[0]
+    for i in range(1,len(branches_list)):
+        tree_model.join(branches_list[i])
+    for leaf in leaf_list:
+        leaves_model.join(leaf)
     
-    return tree_model
+    return tree_model, leaves_model
 
 if __name__ == "__main__":
     # Parse arguments
@@ -196,7 +225,8 @@ if __name__ == "__main__":
                         sides_n=args.sides_n, base_diameter=args.base_diameter)
     # branch model
     branch_model = ob.cilinderOBJ(num_sides=8)
-    tree_obj = get_tree_model(tree, branch_model)
+    leaf_model = ob.leafOBJ()
+    tree_obj, leaves_obj = get_tree_model(tree, branch_model, leaf_model)
     tree_obj.to_file(args.filename)
 
     print("Tree ready!")
@@ -230,11 +260,16 @@ if __name__ == "__main__":
 
     # Generate tree gpu shape
     tree_shape = tree_obj.to_shape((0.59,0.29,0.00))
+    leaves_shape = leaves_obj.to_shape((0,0.7,0))
     #tree_gpu = es.toGPUShape(tree_obj.to_shape((0.59,0.29,0.00)))
     tree_gpu = es.toGPUShape(tree_shape)
+    leaves_gpu = es.toGPUShape(leaves_shape)
     tree_model = sg.SceneGraphNode("tree")
-    tree_model.childs = [tree_gpu
-    ]
+    trunk_node = sg.SceneGraphNode("Trunk_branches")
+    trunk_node.childs = [tree_gpu]
+    leaves_node = sg.SceneGraphNode("leaves")
+    leaves_node.childs = [leaves_gpu]
+    tree_model.childs = [trunk_node, leaves_node]
     gpuAxis = es.toGPUShape(bs.createAxis(7))
 
     # Using the same view and projection matrices in the whole application
