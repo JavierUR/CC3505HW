@@ -104,11 +104,11 @@ def create_terrain(width, lenght, spu, fz):
 
 def generateTreeModels(num, rec_level):
     trees = []
-    branch_model = ob.cubeOBJ()
+    branch_model = ob.cilinderOBJ(num_sides=7)
     for _ in range(num):
         height = 0.8 + 0.4*np.random.random()
         angle = np.deg2rad(15 + 70*np.random.random())
-        split_n = np.random.randint(1,4)
+        split_n = np.random.randint(2,5) 
         decr = 0.8 + 0.15*np.random.random()
         sides_n = np.random.randint(1,6)
         base_diameter = 0.01 + 0.05*np.random.random()
@@ -196,7 +196,7 @@ def generate_random_terrain_fun():
                         gaussians[2](x,y)
 
 if __name__ == "__main__":
-    np.random.seed(0) 
+    np.random.seed(123) 
     # Initialize glfw
     if not glfw.init():
         sys.exit()
