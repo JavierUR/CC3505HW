@@ -83,7 +83,7 @@ class OBJModel(object):
         return OBJModel(new_vertices.tolist(), new_normals.tolist(), copy.deepcopy(self.faces))
 
 def cubeOBJ():
-    # Defining the location and colors of each vertex  of the shape
+    # Defining the location of each vertex  of the shape
     vertices = [
     #   positions
     # Z+
@@ -145,3 +145,31 @@ def cubeOBJ():
 
 def cilinderOBJ():
     pass
+
+def leafOBJ():
+    # Defining the location of each vertex  of the shape
+    vertices = [
+    #   positions
+        [ 0.0,  0.0,  0.0],
+        [ 0.4,  0.0,  1.0],
+        [-0.4,  0.0,  1.0]
+    ]
+    
+    normals = [
+    #normals
+    # Y+
+        [0,1,0],
+    # Y-
+        [0,-1,0]
+    ]
+
+    # Defining connections among vertices
+    # Every face has 3 vertices
+
+    faces = [
+    #   vertex texture normal
+        [[1,None,1],[2,None,1],[3,None,1]], #Y+
+        [[3,None,2],[2,None,2],[1,None,2]], #Y-
+    ]
+
+    return OBJModel(vertices, normals, faces)
