@@ -16,10 +16,10 @@ import lighting_shaders as ls
 import obj_model as ob
 
 HELP_TEXT = """
-SPACE: toggle fill or line mode
-ENTER: toggle axis
-ARROW UP/DOWN: move camera up or down
-ARROW LEFT/RIGHT: move camera left or right
+SPACE: Toggle fill or line mode
+ENTER: Toggle axis
+ARROW UP/DOWN: Move camera up or down
+ARROW LEFT/RIGHT: Move camera left or right
 """
 
 # A class to store the application control
@@ -62,8 +62,13 @@ def on_key(window, key, scancode, action, mods):
     else:
         print('Unknown key')
 
+# A class to manage branches position and orientation
 class Branch:
     def __init__(self, origin, end, side, diameter):
+        # origin -  branch origin 3d point
+        # end - branch end 3d point
+        # side - 3D vector pointing to the side of the branch
+        # diameter - diameter of the branch
         self.origin=origin
         self.end = end
         self.diameter = diameter
@@ -73,6 +78,7 @@ class Branch:
         self.side = side
         
     def get_transform(self):
+        # return -  A matrix tranform for the branch model
         # Asumes shape of dimension 1 in every axis and centered in origin
         scale = tr.scale(self.diameter, self.diameter, self.length)
 
@@ -92,6 +98,7 @@ class Branch:
         return tr.matmul([ look, scale])
     
     def get_leaf_transform(self):
+        # return - A matrix tranform for the leaf model
         # Asumes shape of dimension 1 in every axis and centered in origin
         scale = tr.scale(8*self.diameter, 8*self.diameter, self.length)
 
@@ -113,6 +120,17 @@ class Branch:
 class FractalTree3D:
     def __init__(self, height, split_ang, split_n, decr, rec_level, sides_n, 
                 base_diameter, origin=(0,0,0), direction=(0,0,1), side=(0,1,0)):
+        # height - height of the tree
+        # split_ang - Angle of the branches
+        # split_n - Number of separation in the trunk where branches start
+        # decr - Factor to reduce branches as the tree grows
+        # rec_level - Fractal recursion level
+        # sides_n - Number of branch repetition on the sides
+        # base_diameter - Diameter of the trunk
+        # origin - Tree origin 3D point
+        # direction - Tree direction 3D vector
+        # side - Tree side 3D vector
+        # split_ang
         self.childs=[]
         # normalize direction and side vectors
         direction = np.array(direction)/np.linalg.norm(direction)
@@ -124,10 +142,10 @@ class FractalTree3D:
         trunk_end = trunk_origin + height*direction
         self.childs.append(Branch(trunk_origin,trunk_end, side, base_diameter))
         # Length of first segment h=l+decr*l+decr^2*l...
-        seg_length = height/np.sum([decr**i for i in range(split_n)])
+        seg_length = height/np.sum([decr**i for i in range(split_n+1)])
         # Create lateral branches
         branch_origin = trunk_origin + seg_length*direction
-        for _ in range(split_n-1):
+        for _ in range(split_n):
             seg_length = decr*seg_length # Length of following segments
             if rec_level > 0: # Add lateral branches
                 rotM1 = tr.rotationA(split_ang, side)
@@ -149,22 +167,14 @@ class FractalTree3D:
                     branch_side = np.matmul(branch_side, rotM2[:3,:3])
             branch_origin += seg_length*direction
 
-def get_tree_model_sg(tree: FractalTree3D, branch_model: es.GPUShape):
-    tree_sg = sg.SceneGraphNode("tree")
-    tree_sg.childs = []
-
-    for child in tree.childs:
-        if isinstance(child, FractalTree3D):
-            tree_sg.childs.append(get_tree_model_sg(child, branch_model))
-        else:
-            branch = sg.SceneGraphNode("branch")
-            branch.transform = child.get_transform()
-            branch.childs = [branch_model]
-            tree_sg.childs.append(branch)
-    return tree_sg
 
 def get_tree_model(tree: FractalTree3D, branch_model: ob.OBJModel,
                     leaf_model: ob.OBJModel) -> ob.OBJModel:
+    # Creaates a 3d obj model from a fractal tree and 
+    # obj model for the branches and leaves
+    # tree - FractalTree3D to use
+    # branch_model - OBJ model for the branches and trunk
+    # leaves_model - OBJ model for the leaves
     branches_list = []
     leaf_list = []
 
@@ -176,7 +186,8 @@ def get_tree_model(tree: FractalTree3D, branch_model: ob.OBJModel,
         else:
             t_M = child.get_transform()
             branches_list.append(branch_model.transform(t_M))
-            if len(tree.childs) == 1: # Last recursion level
+            # Add leaves at the last recursion level
+            if len(tree.childs) == 1:
                 l_M = child.get_leaf_transform()
                 leaf_list.append(leaf_model.transform(l_M))
 
@@ -188,6 +199,31 @@ def get_tree_model(tree: FractalTree3D, branch_model: ob.OBJModel,
         leaves_model.join(leaf)
     
     return tree_model, leaves_model
+
+def get_tree_model_sg(tree_obj: ob.OBJModel, leaves_obj: ob.OBJModel,
+                        tree_color: tuple, leaves_color: tuple) -> sg.SceneGraphNode:
+    # Generate a scenegraph node of the tree with leaves
+    # tree_obj - Tree obj model
+    # leaves_obj - Tree leaves obj model
+    # tree_color - Color tuple for the Tree
+    # leaves_color - Color tuple for the leaves
+    # return - Tree ScenGraphNode
+
+    # Convert obj models to shapes
+    tree_shape = tree_obj.to_shape(tree_color)
+    leaves_shape = leaves_obj.to_shape(leaves_color)
+    # Create gpu models
+    tree_gpu = es.toGPUShape(tree_shape)
+    leaves_gpu = es.toGPUShape(leaves_shape)
+    # Create tree scene graph node
+    tree_node = sg.SceneGraphNode("tree")
+    trunk_node = sg.SceneGraphNode("Trunk_branches")
+    trunk_node.childs = [tree_gpu]
+    leaves_node = sg.SceneGraphNode("leaves")
+    leaves_node.childs = [leaves_gpu]
+    tree_node.childs = [trunk_node, leaves_node]
+
+    return tree_node
 
 if __name__ == "__main__":
     # Parse arguments
@@ -224,10 +260,10 @@ if __name__ == "__main__":
                         split_n=args.split_n, decr=args.decr, rec_level=args.rec_level, 
                         sides_n=args.sides_n, base_diameter=args.base_diameter)
     # branch model
-    branch_model = ob.cilinderOBJ(num_sides=8)
+    branch_model = ob.cilinderOBJ(num_vertex=8)
     leaf_model = ob.leafOBJ()
     tree_obj, leaves_obj = get_tree_model(tree, branch_model, leaf_model)
-    tree_obj.to_file(args.filename)
+    
 
     print("Tree ready!")
 
@@ -258,18 +294,14 @@ if __name__ == "__main__":
     # and which one is at the back
     glEnable(GL_DEPTH_TEST)
 
-    # Generate tree gpu shape
-    tree_shape = tree_obj.to_shape((0.59,0.29,0.00))
-    leaves_shape = leaves_obj.to_shape((0,0.7,0))
-    #tree_gpu = es.toGPUShape(tree_obj.to_shape((0.59,0.29,0.00)))
-    tree_gpu = es.toGPUShape(tree_shape)
-    leaves_gpu = es.toGPUShape(leaves_shape)
-    tree_model = sg.SceneGraphNode("tree")
-    trunk_node = sg.SceneGraphNode("Trunk_branches")
-    trunk_node.childs = [tree_gpu]
-    leaves_node = sg.SceneGraphNode("leaves")
-    leaves_node.childs = [leaves_gpu]
-    tree_model.childs = [trunk_node, leaves_node]
+    # # Generate tree gpu shape
+    tree_node = get_tree_model_sg(tree_obj, leaves_obj, 
+                                tree_color=(0.59,0.29,0.00), leaves_color=(0,0.7,0))
+
+    # Save tree with leaves
+    tree_obj.join(leaves_obj)
+    tree_obj.to_file(args.filename)
+
     gpuAxis = es.toGPUShape(bs.createAxis(7))
 
     # Using the same view and projection matrices in the whole application
@@ -344,7 +376,7 @@ if __name__ == "__main__":
         glUniformMatrix4fv(glGetUniformLocation(phongPipeline.shaderProgram, "view"), 1, GL_TRUE, view)
         
 
-        sg.drawSceneGraphNode(tree_model, phongPipeline, "model")
+        sg.drawSceneGraphNode(tree_node, phongPipeline, "model")
         # Once the render is done, buffers are swapped, showing only the complete scene.
         glfw.swap_buffers(window)
 
