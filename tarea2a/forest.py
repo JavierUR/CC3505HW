@@ -64,6 +64,11 @@ def on_key(window, key, scancode, action, mods):
         print('Unknown key')
 
 def create_terrain(width, lenght, spu, fz):
+    # Create a terrain model from a height funtion
+    # width - Terrain width
+    # lenght - Terrain lenght
+    # spu - Squares per unit (model square density)
+    # fz - Height function fz(x,y)->z
     assert(spu>0)
     w_n = int(width*spu) +1
     dw = width/(w_n-1)
@@ -94,35 +99,49 @@ def create_terrain(width, lenght, spu, fz):
             if (i < (w_n-1)) and (j< (l_n-1)):
                 v = l_n*i + j + 1 # vertex index
                 faces.append(
-                    [[v,None,v],[v+1,None,v+1],[v+l_n+1,None,v+l_n+1]]
+                    [[v,None,v],[v+l_n,None,v+l_n],[v+l_n+1,None,v+l_n+1]]
                 )
                 faces.append(
-                    [[v+l_n+1,None,v+l_n+1],[v+l_n,None,v+l_n],[v,None,v]]
+                    [[v+l_n+1,None,v+l_n+1],[v+1,None,v+1],[v,None,v]]
                 )
     
     return ob.OBJModel(vertices, normals, faces)
 
 def generateTreeModels(num, rec_level):
+    # Generates a list of fractal tree models in obj format
+    # num - Number of models to generate
+    # rec_level - Recursion level of the fractal tree models
     trees = []
-    branch_model = ob.cilinderOBJ(num_sides=7)
+    leaves = []
+    branch_model = ob.cilinderOBJ(num_vertex=7)
+    leaf_model = ob.leafOBJ()
     for _ in range(num):
         height = 0.8 + 0.4*np.random.random()
         angle = np.deg2rad(15 + 70*np.random.random())
-        split_n = np.random.randint(2,5) 
+        split_n = np.random.randint(1,5) 
         decr = 0.8 + 0.15*np.random.random()
         sides_n = np.random.randint(1,6)
         base_diameter = 0.01 + 0.05*np.random.random()
         #fractalTree = tree.FractalTree3D(height, angle, split_n, decr,
         #                                rec_level, sides_n, base_diameter)
         fractalTree = tree.FractalTree3D(height,angle,split_n,decr,rec_level,sides_n,base_diameter)
-        trees.append(tree.get_tree_model(fractalTree, branch_model))
-    return trees
+        tree_model, leaves_model = tree.get_tree_model(fractalTree, branch_model, leaf_model)
+        trees.append(tree_model)
+        leaves.append(leaves_model)
+    return trees, leaves
 
-def generateUniformPoints(width, lenght, num_points, min_dis, pool=10000):
+def sampleUniformPoints(width, lenght, num_points, min_dis, pool=10000):
+    # Sample points from a uniform distribution in a 2d plane 
+    # with minimum separation between them
+    # width - 2D plane width
+    # lenght - 2D plane lenght
+    # num_points - maximum number of point to sample
+    # pool - number of samples from which points are selected
     xmin = -width/2
     xmax = -xmin
     ymin = -lenght/2
     ymax = -ymin
+    # Generate a pool of points
     possible_points = np.array((np.random.uniform(xmin,xmax,pool),
                        np.random.uniform(ymin,ymax,pool) )).transpose()
     keep_points = possible_points[0].reshape(1,2)
@@ -132,6 +151,7 @@ def generateUniformPoints(width, lenght, num_points, min_dis, pool=10000):
         distances = np.sqrt(
             (keep_points[:,0]-point[0])**2 + (keep_points[:,1]-point[1])**2
         )
+        # Pick point if it's separated from the rest
         if min(distances) >= min_dis:
             keep_points = np.concatenate((keep_points,point.reshape(1,2)))
             count+=1
@@ -139,23 +159,47 @@ def generateUniformPoints(width, lenght, num_points, min_dis, pool=10000):
                 return keep_points
     return keep_points
 
-def populateForest(width, lenght, fz, treeGPUModels, tree_den):
-    scale = tr.uniformScale(0.5)
-    area = width*lenght
-    tree_rad = 0.15
-    tree_area = np.pi*(tree_rad**2)
-    num_trees = int(area/tree_area*tree_den)
-    locations = generateUniformPoints(width,lenght,num_trees, tree_rad)
+def populateForest(locations, fz, treeGPUModels, scale=0.5):
+    # Populates a forest terrain with tree models generating 
+    # a scene graph for visualization and an OJB model
+    # width - Forest region width
+    # lenght - Forest region lenght
+    # fz - Terrain generating function
+    # treeGPUModels - List of tree models
+    # tree_den - Density of trees as percentage
+    scale_tr = tr.uniformScale(scale)
+    # area = width*lenght
+    # tree_rad = 0.17
+    # tree_area = np.pi*(tree_rad**2)
+    # num_trees = int(area/tree_area*tree_den)
+    # locations = sampleUniformPoints(width,lenght,num_trees, tree_rad)
     forest_trees = sg.SceneGraphNode("forest_trees")
     for i in range(len(locations)):
         tree_node = sg.SceneGraphNode("tree")
         x, y = locations[i]
         z = fz(x,y) - 0.03 # Lower to avoid floating trees
-        tree_node.transform = tr.matmul([tr.translate(x, y, z),scale])
+        tree_node.transform = tr.matmul([tr.translate(x, y, z),scale_tr])
         model = i%len(treeGPUModels)
         tree_node.childs = [treeGPUModels[model]]
         forest_trees.childs.append(tree_node)
     return forest_trees
+
+def generate_forest_trees_obj(locations, fz, trees_models, leaves_models, scale=0.5):
+    scale_tr = tr.uniformScale(scale)
+    forest_trees = []
+    for i in range(len(locations)):
+        x, y = locations[i]
+        z = fz(x,y) - 0.03 # Lower to avoid floating trees
+        M = tr.matmul([tr.translate(x, y, z),scale_tr])
+        model = i%len(trees_models)
+        moved_tree = trees_models[model].transform(M)
+        moved_leaves = leaves_models[model].transform(M)
+        moved_tree.join(moved_leaves)
+        forest_trees.append(moved_tree)
+    merged_trees_model = forest_trees[0]
+    for i in range(1,len(forest_trees)):
+        merged_trees_model.join(forest_trees[i])
+    return merged_trees_model
 
 # A class to create a gaussian function
 class Gaussian:
@@ -196,7 +240,7 @@ def generate_random_terrain_fun():
                         gaussians[2](x,y)
 
 if __name__ == "__main__":
-    np.random.seed(123) 
+    np.random.seed(0) 
     # Initialize glfw
     if not glfw.init():
         sys.exit()
@@ -242,28 +286,31 @@ if __name__ == "__main__":
     fz = generate_random_terrain_fun()
     terrain = create_terrain(width=4, lenght=4, spu=7, fz=fz)
     terrain_node = sg.SceneGraphNode("terrain_node")
-    terrain_node.childs = [es.toGPUShape(terrain.to_shape((0,0.4,0.4)))]
+    terrain_node.childs = [es.toGPUShape(terrain.to_shape((0,0.5,0.3)))]
 
     # Create trees
-    trees = generateTreeModels(num=5, rec_level=3)
+    trees, leaves = generateTreeModels(num=5, rec_level=3)
     treesGPU = []
-    for objTree in trees:
+    for i in range(len(trees)):
         treesGPU.append(
-            es.toGPUShape(objTree.to_shape((0.59,0.29,0.00)))
+            tree.get_tree_model_sg(tree_obj=trees[i], leaves_obj=leaves[i],
+                                    tree_color=(0.59,0.29,0.00), leaves_color=(0,0.7,0))
         )
-    trees_node = populateForest(4, 4, fz, treesGPU,0.09)
-
-    # treeFractal = tree.FractalTree3D(1,45,3,0.9,3,4,0.02)
-    # branch_model = ob.cubeOBJ()
-    # tree_obj = tree.get_tree_model(treeFractal, branch_model)
-    # treeGPU = es.toGPUShape(tree_obj.to_shape((0.59,0.29,0.00)))
-    # trees_node = sg.SceneGraphNode("tree_node")
-    # trees_node.childs = [treeGPU]
-    # trees_node.transform = tr.translate(0,0,fz(0,0))
+    area = 4*4
+    tree_rad = 0.17
+    tree_area = np.pi*(tree_rad**2)
+    num_trees = int(area/tree_area*0.09)
+    locations = sampleUniformPoints(4,4,num_trees, tree_rad)
+    trees_node = populateForest(locations, fz, treesGPU)
 
     # Assemble forest
     forest = sg.SceneGraphNode("forest")
     forest.childs = [terrain_node, trees_node]
+
+    # Save complete forest model
+    forest_merged_trees = generate_forest_trees_obj(locations, fz, trees, leaves)
+    terrain.join(forest_merged_trees)
+    terrain.to_file("forest.obj")
 
     while not glfw.window_should_close(window):
         # Using GLFW to check for input events
