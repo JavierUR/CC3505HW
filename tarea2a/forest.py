@@ -161,18 +161,11 @@ def sampleUniformPoints(width, lenght, num_points, min_dis, pool=10000):
 
 def populateForest(locations, fz, treeGPUModels, scale=0.5):
     # Populates a forest terrain with tree models generating 
-    # a scene graph for visualization and an OJB model
-    # width - Forest region width
-    # lenght - Forest region lenght
+    # a scene graph for visualization
+    # locations - Matrix of (N,2) of the trees x,y coordinates
     # fz - Terrain generating function
     # treeGPUModels - List of tree models
-    # tree_den - Density of trees as percentage
     scale_tr = tr.uniformScale(scale)
-    # area = width*lenght
-    # tree_rad = 0.17
-    # tree_area = np.pi*(tree_rad**2)
-    # num_trees = int(area/tree_area*tree_den)
-    # locations = sampleUniformPoints(width,lenght,num_trees, tree_rad)
     forest_trees = sg.SceneGraphNode("forest_trees")
     for i in range(len(locations)):
         tree_node = sg.SceneGraphNode("tree")
@@ -185,6 +178,12 @@ def populateForest(locations, fz, treeGPUModels, scale=0.5):
     return forest_trees
 
 def generate_forest_trees_obj(locations, fz, trees_models, leaves_models, scale=0.5):
+    # Generates an obj model with all the trees merged
+    # locations - Matrix of (N,2) of the trees x,y coordinates
+    # fz - Terrain height function fz(x,y)->z
+    # trees_models - List of OBJ trees models
+    # leaves_models - List of OBJ leaves models
+    # scales - Scale factor for the trees
     scale_tr = tr.uniformScale(scale)
     forest_trees = []
     for i in range(len(locations)):
@@ -282,9 +281,12 @@ if __name__ == "__main__":
     camera_r = 3
     ltime = 0
 
+    # FOREST GENERATION
+    f_width = 4
+    f_lenght = 4
     # Create forest terrain
     fz = generate_random_terrain_fun()
-    terrain = create_terrain(width=4, lenght=4, spu=7, fz=fz)
+    terrain = create_terrain(width=f_width, lenght=f_lenght, spu=7, fz=fz)
     terrain_node = sg.SceneGraphNode("terrain_node")
     terrain_node.childs = [es.toGPUShape(terrain.to_shape((0,0.5,0.3)))]
 
@@ -296,11 +298,11 @@ if __name__ == "__main__":
             tree.get_tree_model_sg(tree_obj=trees[i], leaves_obj=leaves[i],
                                     tree_color=(0.59,0.29,0.00), leaves_color=(0,0.7,0))
         )
-    area = 4*4
+    area = f_width*f_lenght
     tree_rad = 0.17
     tree_area = np.pi*(tree_rad**2)
     num_trees = int(area/tree_area*0.09)
-    locations = sampleUniformPoints(4,4,num_trees, tree_rad)
+    locations = sampleUniformPoints(f_width,f_lenght,num_trees, tree_rad)
     trees_node = populateForest(locations, fz, treesGPU)
 
     # Assemble forest
