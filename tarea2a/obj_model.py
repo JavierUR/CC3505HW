@@ -6,11 +6,16 @@ from basic_shapes import Shape
 
 class OBJModel(object):
     def __init__(self, vertices:list, normals:list, faces:list):
+        # vertices - List of 3d points
+        # normal - List of 3d vector normal for each vertex
+        # faces - List of vertex association
         self.vertices = vertices
         self.normals = normals
         self.faces = faces
 
     def to_file(self, file_name:str):
+        # Write model to file in OBJ format
+        # file_name - Name of the file
         with open(file_name, 'w') as f:
             f.write("# Generated tree OBJ model\n")
             f.write("# Vertices\n")
@@ -24,6 +29,8 @@ class OBJModel(object):
                 f.write(f"f {face[0][0]}//{face[0][2]} {face[1][0]}//{face[1][2]} {face[2][0]}//{face[2][2]}\n")
 
     def to_shape(self, color):
+        # Create a Shape from the OBJ model
+        # Color - Color tuple for the created shape
         vertex_data = []
         indices = []
         aux_dict = {}
@@ -50,6 +57,8 @@ class OBJModel(object):
         return Shape(vertex_data, indices)
 
     def join(self, model: 'OBJModel') -> 'OBJModel':
+        # Join the model with another (modifies the model)
+        # model - OBJModel to merge
         n_vertices = len(self.vertices)
         n_normals = len(self.normals)
         # Join vertices and normals
@@ -66,6 +75,9 @@ class OBJModel(object):
         self.faces += temp_faces
 
     def transform(self, M) -> 'OBJModel':
+        # Transform vertices and normals with a transformation matrix
+        # Return new OBJModel
+        # M - (4,4) Transformation matrix
         # Add dimension to vertices
         new_vertices = np.column_stack([self.vertices, np.ones(len(self.vertices))])[:,:,np.newaxis]
         # Transform vertices
@@ -83,6 +95,7 @@ class OBJModel(object):
         return OBJModel(new_vertices.tolist(), new_normals.tolist(), copy.deepcopy(self.faces))
 
 def cubeOBJ():
+    # A 3D cube in OBJ format
     # Defining the location of each vertex  of the shape
     vertices = [
     #   positions
@@ -143,10 +156,12 @@ def cubeOBJ():
 
     
 
-def cilinderOBJ(num_sides: int):
+def cilinderOBJ(num_vertex: int):
+    # A cilinder in OBJ format
+    # num_vertex - Number of vertices to aproximate circles
     # Create a cilinder OBJ model
-    assert(num_sides>2)
-    angles = np.linspace(0,2*np.pi,num_sides+1)[:-1]
+    assert(num_vertex>2)
+    angles = np.linspace(0,2*np.pi,num_vertex+1)[:-1]
     vertices_up = []
     vertices_down = []
     normals = [
@@ -158,7 +173,7 @@ def cilinderOBJ(num_sides: int):
     ]
     faces = []
     # Create sides
-    for i in range(num_sides):
+    for i in range(num_vertex):
         # Create up and down vertices
         x = np.cos(angles[i])
         y = np.sin(angles[i])
@@ -168,9 +183,9 @@ def cilinderOBJ(num_sides: int):
         normals.append([x, y, 0])
         # Create lateral faces
         j = i + 1
-        j_next = (i+1)%num_sides + 1
-        k = j+num_sides
-        k_next = j_next + num_sides
+        j_next = (i+1)%num_vertex + 1
+        k = j+num_vertex
+        k_next = j_next + num_vertex
         faces.append(
             [[j,None,j+2],[k,None,j+2],[j_next,None,j_next+2]],
         )
@@ -179,21 +194,22 @@ def cilinderOBJ(num_sides: int):
         )
     vertices = vertices_up + vertices_down
     # create up/down faces
-    for i in range(num_sides-2):
+    for i in range(num_vertex-2):
         # Z+ circle
         j = i+1
         faces.append(
             [[1,None,1],[j+1,None,1],[j+2,None,1]]
         )
         # Z- circle
-        k = j+num_sides
+        k = j+num_vertex
         faces.append(
-            [[k+2,None,2],[k+1,None,2],[num_sides+1,None,2]]
+            [[k+2,None,2],[k+1,None,2],[num_vertex+1,None,2]]
         )
 
     return OBJModel(vertices, normals, faces)
 
 def leafOBJ():
+    # A simple leaf model in OBJ format
     # Defining the location of each vertex  of the shape
     vertices = [
     #   positions
