@@ -20,6 +20,8 @@ SPACE: Toggle fill or line mode
 ENTER: Toggle axis
 ARROW UP/DOWN: Move camera up or down
 ARROW LEFT/RIGHT: Move camera left or right
+W: Zoom in
+S: Zoom out
 """
 
 # A class to store the application control
@@ -31,6 +33,8 @@ class Controller:
         self.down = False
         self.right = False
         self.left = False
+        self.zoomIn = False
+        self.zoomOut = False
 
 
 # we will use the global controller as communication with the callback function
@@ -47,6 +51,10 @@ def on_key(window, key, scancode, action, mods):
         controller.up = (action == glfw.PRESS or action == glfw.REPEAT)
     elif key == glfw.KEY_DOWN:
         controller.down = (action == glfw.PRESS or action == glfw.REPEAT)
+    elif key == glfw.KEY_W:
+        controller.zoomIn = (action == glfw.PRESS or action == glfw.REPEAT)
+    elif key == glfw.KEY_S:
+        controller.zoomOut = (action == glfw.PRESS or action == glfw.REPEAT)
     
     elif key == glfw.KEY_SPACE:
         if action == glfw.PRESS:
@@ -318,10 +326,12 @@ if __name__ == "__main__":
         time = glfw.get_time()
         dt = time-ltime
         ltime = time
+        # Update camera values
         camera_theta -= 2.0*dt*(controller.right - controller.left)
         camera_phi -= 2.0*dt*(controller.up - controller.down)
         camera_phi = np.clip(camera_phi, 0+0.00001, np.pi/2) # view matrix is NaN when phi=0
-        #cam_y += 2.0*dt*(controller.up - controller.down)
+        camera_r += 2.0*dt*(controller.zoomOut - controller.zoomIn)
+        camera_r = np.clip(camera_r, 0.7, 3)
 
         cam_x = camera_r * np.sin(camera_phi) * np.sin(camera_theta)
         cam_y = camera_r * np.sin(camera_phi) * np.cos(camera_theta)
@@ -331,7 +341,7 @@ if __name__ == "__main__":
 
         view = tr.lookAt(
             viewPos,
-            np.array([0,0,0]),
+            np.array([0,0,0.5]),
             np.array([0,0,1])
         )
 
