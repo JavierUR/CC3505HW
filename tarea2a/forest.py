@@ -107,7 +107,7 @@ def create_terrain(width, lenght, spu, fz):
     
     return ob.OBJModel(vertices, normals, faces)
 
-def generateTreeModels(num, rec_level):
+def generate_tree_models(num, rec_level):
     # Generates a list of fractal tree models in obj format
     # num - Number of models to generate
     # rec_level - Recursion level of the fractal tree models
@@ -122,15 +122,13 @@ def generateTreeModels(num, rec_level):
         decr = 0.8 + 0.15*np.random.random()
         sides_n = np.random.randint(1,6)
         base_diameter = 0.01 + 0.05*np.random.random()
-        #fractalTree = tree.FractalTree3D(height, angle, split_n, decr,
-        #                                rec_level, sides_n, base_diameter)
         fractalTree = tree.FractalTree3D(height,angle,split_n,decr,rec_level,sides_n,base_diameter)
         tree_model, leaves_model = tree.get_tree_model(fractalTree, branch_model, leaf_model)
         trees.append(tree_model)
         leaves.append(leaves_model)
     return trees, leaves
 
-def sampleUniformPoints(width, lenght, num_points, min_dis, pool=10000):
+def sample_uniform_points(width, lenght, num_points, min_dis, pool=10000):
     # Sample points from a uniform distribution in a 2d plane 
     # with minimum separation between them
     # width - 2D plane width
@@ -159,7 +157,7 @@ def sampleUniformPoints(width, lenght, num_points, min_dis, pool=10000):
                 return keep_points
     return keep_points
 
-def populateForest(locations, fz, treeGPUModels, scale=0.5):
+def populate_forest(locations, fz, treeGPUModels, scale=0.5):
     # Populates a forest terrain with tree models generating 
     # a scene graph for visualization
     # locations - Matrix of (N,2) of the trees x,y coordinates
@@ -223,23 +221,45 @@ class Gaussian:
         my = ((y-self.y0)/self.stdy)**2
         return self.sign*self.const*np.exp(-0.5*(mx+my))
 
-def generate_random_terrain_fun():
+def generate_random_terrain_fun(gauss_num, spikyness):
     # Creaete a random terrain height function by  the sum
-    # of three gaussians
+    # of gaussians
+    # gauss_num - Number of gaussians to use
+    # spikyness - Number to determine how flat or spiky is the generated terrain
     # return - Lambda function f(x,y) -> z
+    if spikyness == 0: # Create flat terrain
+        return lambda x,y: 0.0
     gaussians = []
-    for _ in range(3):
+    
+    for _ in range(gauss_num):
         x0 = -1.5 + 3*np.random.random()
         y0 = -1.5 + 3*np.random.random()
-        stdx = 0.2 + 1.3*np.random.random()
-        stdy = 0.2 + 1.3*np.random.random()
+        stdx = (0.5 + 0.5*np.random.random())/spikyness
+        stdy = (0.5 + 0.5*np.random.random())/spikyness
         sign = np.random.randint(0,2)
         gaussians.append(Gaussian(x0,y0,stdx,stdy,sign))
-    return lambda x,y: gaussians[0](x,y) + gaussians[1](x,y) + \
-                        gaussians[2](x,y)
+    return lambda x,y: sum([g(x,y) for g in gaussians])
 
 if __name__ == "__main__":
-    np.random.seed(0) 
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='3D fractal tree generator.')
+    parser.add_argument('filename', metavar='Filename', type=str,
+                    help='Name for the generated model file')
+    parser.add_argument('tree_den', metavar='Density', type=float,
+                    help='Density of trees ]0,1]')
+    parser.add_argument('species_num', metavar='Species_num', type=int,
+                    help='Number of different tree models to create')
+    parser.add_argument('gauss_num', metavar='Gauss_num', type=int,
+                    help='Number of gaussians used for terrain generation')
+    parser.add_argument('spikyness', metavar='Spikyness', type=float,
+                    help='Determines how spiky or flat is the generated terrain [0, inf[')
+    parser.add_argument('seed', metavar='Seed', type=int,
+                    help='Seed for random number generators')
+    args = parser.parse_args()
+    assert(0 < args.tree_den <= 1)
+    assert(0 < args.gauss_num)
+    # Set seed for random number generator
+    np.random.seed(args.seed) 
     # Initialize glfw
     if not glfw.init():
         sys.exit()
@@ -282,16 +302,17 @@ if __name__ == "__main__":
     ltime = 0
 
     # FOREST GENERATION
+    # Terrain dimension
     f_width = 4
     f_lenght = 4
     # Create forest terrain
-    fz = generate_random_terrain_fun()
+    fz = generate_random_terrain_fun(args.gauss_num, args.spikyness)
     terrain = create_terrain(width=f_width, lenght=f_lenght, spu=7, fz=fz)
     terrain_node = sg.SceneGraphNode("terrain_node")
     terrain_node.childs = [es.toGPUShape(terrain.to_shape((0,0.5,0.3)))]
 
     # Create trees
-    trees, leaves = generateTreeModels(num=5, rec_level=3)
+    trees, leaves = generate_tree_models(num=args.species_num, rec_level=3)
     treesGPU = []
     for i in range(len(trees)):
         treesGPU.append(
@@ -299,20 +320,20 @@ if __name__ == "__main__":
                                     tree_color=(0.59,0.29,0.00), leaves_color=(0,0.7,0))
         )
     area = f_width*f_lenght
-    tree_rad = 0.17
+    tree_rad = 0.2
     tree_area = np.pi*(tree_rad**2)
-    num_trees = int(area/tree_area*0.09)
-    locations = sampleUniformPoints(f_width,f_lenght,num_trees, tree_rad)
-    trees_node = populateForest(locations, fz, treesGPU)
+    num_trees = int((area/tree_area)*args.tree_den)
+    locations = sample_uniform_points(f_width,f_lenght,num_trees, tree_rad)
+    trees_node = populate_forest(locations, fz, treesGPU)
 
     # Assemble forest
     forest = sg.SceneGraphNode("forest")
     forest.childs = [terrain_node, trees_node]
 
     # Save complete forest model
-    forest_merged_trees = generate_forest_trees_obj(locations, fz, trees, leaves)
-    terrain.join(forest_merged_trees)
-    terrain.to_file("forest.obj")
+    #forest_merged_trees = generate_forest_trees_obj(locations, fz, trees, leaves)
+    #terrain.join(forest_merged_trees)
+    #terrain.to_file("forest.obj")
 
     while not glfw.window_should_close(window):
         # Using GLFW to check for input events
