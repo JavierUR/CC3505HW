@@ -250,22 +250,24 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description='3D fractal tree generator.')
     parser.add_argument('filename', metavar='Filename', type=str,
-                    help='Name for the generated model file')
+                    help='(string) Name for the generated model file')
     parser.add_argument('tree_den', metavar='Density', type=float,
-                    help='Density of trees ]0,1]')
+                    help='(float) Density of trees ]0,1]')
     parser.add_argument('species_num', metavar='Species_num', type=int,
-                    help='Number of different tree models to create')
+                    help='(int) Number of different tree models to create')
     parser.add_argument('gauss_num', metavar='Gauss_num', type=int,
-                    help='Number of gaussians used for terrain generation')
+                    help='(int) Number of gaussians used for terrain generation')
     parser.add_argument('spikyness', metavar='Spikyness', type=float,
-                    help='Determines how spiky or flat is the generated terrain [0, inf[')
+                    help='(float) Determines how spiky or flat is the generated terrain [0, inf[')
     parser.add_argument('seed', metavar='Seed', type=int,
-                    help='Seed for random number generators')
+                    help='(int) Seed for random number generators')
     args = parser.parse_args()
     assert(0 < args.tree_den <= 1)
     assert(0 < args.gauss_num)
+
     # Set seed for random number generator
     np.random.seed(args.seed) 
+
     # Initialize glfw
     if not glfw.init():
         sys.exit()
@@ -337,9 +339,9 @@ if __name__ == "__main__":
     forest.childs = [terrain_node, trees_node]
 
     # Save complete forest model
-    #forest_merged_trees = generate_forest_trees_obj(locations, fz, trees, leaves)
-    #terrain.join(forest_merged_trees)
-    #terrain.to_file("forest.obj")
+    forest_merged_trees = generate_forest_trees_obj(locations, fz, trees, leaves)
+    terrain.join(forest_merged_trees)
+    terrain.to_file(args.filename)
 
     while not glfw.window_should_close(window):
         # Using GLFW to check for input events

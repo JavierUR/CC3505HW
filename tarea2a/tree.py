@@ -205,7 +205,7 @@ def get_tree_model(tree: FractalTree3D, branch_model: ob.OBJModel,
         tree_model.join(branches_list[i])
     for leaf in leaf_list:
         leaves_model.join(leaf)
-    
+
     return tree_model, leaves_model
 
 def get_tree_model_sg(tree_obj: ob.OBJModel, leaves_obj: ob.OBJModel,
@@ -237,19 +237,19 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description='3D fractal tree generator.')
     parser.add_argument('filename', metavar='Filename', type=str,
-                    help='Name for the generated model file')
+                    help='(string) Name for the generated model file')
     parser.add_argument('split_ang', metavar='Angle', type=float,
-                    help='Angle of branch separation in degrees')
-    parser.add_argument('split_n', metavar='Separations', type=int,
-                    help='Number of separation in the tree')
+                    help='(float) Angle of branch separation in degrees')
+    parser.add_argument('split_n', metavar='Branches', type=int,
+                    help='(int) Number of branches in the tree')
     parser.add_argument('decr', metavar='Decrement', type=float,
-                    help='Percentage to make the branches smaller as the tree grows up')
+                    help='(float) Percentage to make the branches smaller as the tree grows up')
     parser.add_argument('rec_level', metavar='Depth', type=int,
-                    help='Depth or recursion level of the tree branches')
+                    help='(int) Depth or recursion level of the tree branches')
     parser.add_argument('sides_n', metavar='Sides', type=int,
-                    help='Number of braches at the sides of the tree. (Minimum 1)')
+                    help='(int) Number of braches at the sides of the tree. (Minimum 1)')
     parser.add_argument('base_diameter', metavar='Diameter', type=float,
-                    help='Tree trunk diameter')
+                    help='(float) Tree trunk diameter')
     args = parser.parse_args()
 
     assert(args.split_n > 0)
@@ -257,7 +257,7 @@ if __name__ == "__main__":
     assert(args.rec_level >= 0)
     assert(args.sides_n > 1)
     assert(args.base_diameter > 0)
-    
+
     # Initialize glfw
     if not glfw.init():
         sys.exit()
@@ -271,7 +271,7 @@ if __name__ == "__main__":
     branch_model = ob.cilinderOBJ(num_vertex=8)
     leaf_model = ob.leafOBJ()
     tree_obj, leaves_obj = get_tree_model(tree, branch_model, leaf_model)
-    
+
 
     print("Tree ready!")
 
@@ -302,7 +302,7 @@ if __name__ == "__main__":
     # and which one is at the back
     glEnable(GL_DEPTH_TEST)
 
-    # # Generate tree gpu shape
+    # Generate tree scene graph node
     tree_node = get_tree_model_sg(tree_obj, leaves_obj, 
                                 tree_color=(0.59,0.29,0.00), leaves_color=(0,0.7,0))
 
