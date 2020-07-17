@@ -1,6 +1,6 @@
 import argparse
 import json
-import pdb
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.sparse import dok_matrix
