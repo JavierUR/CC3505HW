@@ -1,5 +1,6 @@
 import argparse
 import json
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -7,11 +8,13 @@ import glfw
 from OpenGL.GL import *
 import OpenGL.GL.shaders
 
+import scene_graph as sg
 import transformations as tr
 import basic_shapes as bs
 import easy_shaders as es
 import lighting_shaders as ls
-h=0.1
+
+h=0.01
 
 HELP_TEXT = """
 SPACE: toggle fill or line mode
@@ -33,6 +36,7 @@ class Controller:
         self.left = False
         self.zoomIn = False
         self.zoomOut = False
+        self.showVolume = 0
 
 
 # we will use the global controller as communication with the callback function
@@ -53,6 +57,15 @@ def on_key(window, key, scancode, action, mods):
         controller.zoomIn = (action == glfw.PRESS or action == glfw.REPEAT)
     elif key == glfw.KEY_S:
         controller.zoomOut = (action == glfw.PRESS or action == glfw.REPEAT)
+    elif key == glfw.KEY_A:
+        if action == glfw.PRESS:
+            controller.showVolume = 0
+    elif key == glfw.KEY_B:
+        if action == glfw.PRESS:
+            controller.showVolume = 1
+    elif key == glfw.KEY_C:
+        if action == glfw.PRESS:
+            controller.showVolume = 2
     
     elif key == glfw.KEY_SPACE:
         if action == glfw.PRESS:
@@ -67,6 +80,40 @@ def on_key(window, key, scancode, action, mods):
 
     else:
         print('Unknown key')
+
+def find_voxel_volumes(space, Ta,Tb,Tc, voxel_a, voxel_b, voxel_c):
+    global h
+    volumeA = sg.SceneGraphNode("Fish_A_volume")
+    volumeA.childs = []
+    volumeB = sg.SceneGraphNode("Fish_A_volume")
+    volumeC = sg.SceneGraphNode("Fish_A_volume")
+
+    ta_1, ta_2 = Ta-2, Ta+2
+    tb_1, tb_2 = Tb-2, Tb+2
+    tc_1, tc_2 = Tc-2, Tc+2
+    for i in range(space.shape[0]):
+        for j in range(space.shape[1]):
+            for k in range(space.shape[2]):
+                # Find fish A area
+                if ta_1 <= space[i,j,k] <= ta_2:
+                    vox = sg.SceneGraphNode("vox_a_{}_{}_{}".format(i,j,k))
+                    vox.childs = [voxel_a]
+                    vox.transform = tr.translate(i*h, j*h, k*h)
+                    volumeA.childs.append(vox)
+                # Find fish B area
+                elif tb_1 <= space[i,j,k] <= tb_2:
+                    vox = sg.SceneGraphNode("vox_b_{}_{}_{}".format(i,j,k))
+                    vox.childs = [voxel_b]
+                    vox.transform = tr.translate(i*h, j*h, k*h)
+                    volumeB.childs.append(vox)
+                # Find fish C area
+                elif tc_1 <= space[i,j,k] <= tc_2:
+                    vox = sg.SceneGraphNode("vox_c_{}_{}_{}".format(i,j,k))
+                    vox.childs = [voxel_c]
+                    vox.transform = tr.translate(i*h, j*h, k*h)
+                    volumeC.childs.append(vox)
+    return volumeA, volumeB, volumeC
+
 
 if __name__ == "__main__":
     # Parse arguments
@@ -89,6 +136,9 @@ if __name__ == "__main__":
     print(config)
 
     aq_space = np.load(config["filename"])
+    aq_width = aq_space.shape[0] * h
+    aq_lenght = aq_space.shape[1] * h
+    aq_height = aq_space.shape[2] * h
 
     # Initialize glfw
     if not glfw.init():
@@ -122,6 +172,35 @@ if __name__ == "__main__":
     glEnable(GL_DEPTH_TEST)
 
     gpuAxis = es.toGPUShape(bs.createAxis(7))
+
+    # Define fish areas
+    gpuVoxelA = es.toGPUShape(bs.createColorNormalsCube(1,0,0))
+    voxA = sg.SceneGraphNode("vox_a")
+    voxA.childs = [gpuVoxelA]
+    voxA.transform = tr.uniformScale(h)
+
+    gpuVoxelB = es.toGPUShape(bs.createColorNormalsCube(0,1,0))
+    voxB = sg.SceneGraphNode("vox_b")
+    voxB.childs = [gpuVoxelB]
+    voxB.transform = tr.uniformScale(h)
+
+    gpuVoxelC = es.toGPUShape(bs.createColorNormalsCube(0,0,1))
+    voxC = sg.SceneGraphNode("vox_c")
+    voxC.childs = [gpuVoxelC]
+    voxC.transform = tr.uniformScale(h)
+
+    fish_volumes = find_voxel_volumes(aq_space, config['t_a'],config['t_b'],config['t_c'],voxA, voxB, voxC)
+
+    # testvox = sg.SceneGraphNode("testvox")
+    # testvox.childs = [voxA]
+    # testvox.transform = tr.translate(1*h,1*h,1*h)
+
+    # volumeA = sg.SceneGraphNode("Vollume_A")
+    # volumeA.childs = [testvox]
+    
+    scene = sg.SceneGraphNode("Aquarium")
+    scene.childs = [fish_volumes[controller.showVolume]]
+    scene.transform = tr.translate(aq_width/2, aq_lenght/2,0)
 
     # Using the same view and projection matrices in the whole application
     projection = tr.perspective(45, float(width)/float(height), 0.1, 100)
@@ -170,6 +249,34 @@ if __name__ == "__main__":
             glUniformMatrix4fv(glGetUniformLocation(mvpPipeline.shaderProgram, "view"), 1, GL_TRUE, view)
             glUniformMatrix4fv(glGetUniformLocation(mvpPipeline.shaderProgram, "model"), 1, GL_TRUE, tr.identity())
             mvpPipeline.drawShape(gpuAxis, GL_LINES)
+
+        # Draw aquarium
+        glUseProgram(phongPipeline.shaderProgram)
+
+        # White light in all components: ambient, diffuse and specular.
+        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "La"), 1.0, 1.0, 1.0)
+        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Ld"), 1.0, 1.0, 1.0)
+        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Ls"), 1.0, 1.0, 1.0)
+
+        # Object is barely visible at only ambient. Diffuse behavior is slightly red. Sparkles are white
+        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Ka"), 0.3, 0.3, 0.3)
+        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Kd"), 0.9, 0.5, 0.5)
+        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Ks"), 0.05, 0.05, 0.05)
+
+        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "lightPosition"), -5, -5, 5)
+        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "viewPosition"), viewPos[0], viewPos[1], viewPos[2])
+        glUniform1ui(glGetUniformLocation(phongPipeline.shaderProgram, "shininess"), 100)
+        
+        glUniform1f(glGetUniformLocation(phongPipeline.shaderProgram, "constantAttenuation"), 0.0001)
+        glUniform1f(glGetUniformLocation(phongPipeline.shaderProgram, "linearAttenuation"), 0.03)
+        glUniform1f(glGetUniformLocation(phongPipeline.shaderProgram, "quadraticAttenuation"), 0.01)
+
+        glUniformMatrix4fv(glGetUniformLocation(phongPipeline.shaderProgram, "projection"), 1, GL_TRUE, projection)
+        glUniformMatrix4fv(glGetUniformLocation(phongPipeline.shaderProgram, "view"), 1, GL_TRUE, view)
+        
+        # Volume to show
+        scene.childs = [fish_volumes[controller.showVolume]]
+        sg.drawSceneGraphNode(scene, phongPipeline, "model")
 
         # Once the render is done, buffers are swapped, showing only the complete scene.
         glfw.swap_buffers(window)
