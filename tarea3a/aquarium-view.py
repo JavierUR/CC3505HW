@@ -14,7 +14,7 @@ import basic_shapes as bs
 import easy_shaders as es
 import lighting_shaders as ls
 
-h=0.01
+h=0.04
 
 HELP_TEXT = """
 SPACE: toggle fill or line mode
@@ -91,9 +91,10 @@ def find_voxel_volumes(space, Ta,Tb,Tc, voxel_a, voxel_b, voxel_c):
     ta_1, ta_2 = Ta-2, Ta+2
     tb_1, tb_2 = Tb-2, Tb+2
     tc_1, tc_2 = Tc-2, Tc+2
-    for i in range(space.shape[0]):
-        for j in range(space.shape[1]):
-            for k in range(space.shape[2]):
+    # Search for adequate temperature in the water
+    for i in range(1, space.shape[0]-1):
+        for j in range(1, space.shape[1]-1):
+            for k in range(1, space.shape[2]-1):
                 # Find fish A area
                 if ta_1 <= space[i,j,k] <= ta_2:
                     vox = sg.SceneGraphNode("vox_a_{}_{}_{}".format(i,j,k))
@@ -200,7 +201,7 @@ if __name__ == "__main__":
     
     scene = sg.SceneGraphNode("Aquarium")
     scene.childs = [fish_volumes[controller.showVolume]]
-    scene.transform = tr.translate(aq_width/2, aq_lenght/2,0)
+    scene.transform = tr.translate(-aq_width/2, -aq_lenght/2,0)
 
     # Using the same view and projection matrices in the whole application
     projection = tr.perspective(45, float(width)/float(height), 0.1, 100)
