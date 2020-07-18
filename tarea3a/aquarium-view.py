@@ -81,13 +81,83 @@ def on_key(window, key, scancode, action, mods):
     else:
         print('Unknown key')
 
-def find_voxel_volumes(space, Ta,Tb,Tc, voxel_a, voxel_b, voxel_c):
-    global h
-    volumeA = sg.SceneGraphNode("Fish_A_volume")
-    volumeA.childs = []
-    volumeB = sg.SceneGraphNode("Fish_A_volume")
-    volumeC = sg.SceneGraphNode("Fish_A_volume")
+class VoxelVolume(object):
+    def __init__(self, voxel_size, color):
+        self.h2 = voxel_size/2
+        self.r = color[0]
+        self.g = color[1]
+        self.b = color[2]
+        self.vertices = []
+        self.indices = []
+        self.vox_count = 0
 
+    def _get_voxel(self, x, y, z):
+        # Defining the location and colors of each vertex  of the shape
+        vertices = [
+        #   positions         colors   normals
+        # Z+
+            x-self.h2, y-self.h2,  z+self.h2, self.r, self.g, self.b, 0,0,1,
+            x+self.h2, y-self.h2,  z+self.h2, self.r, self.g, self.b, 0,0,1,
+            x+self.h2, y+self.h2,  z+self.h2, self.r, self.g, self.b, 0,0,1,
+            x-self.h2, y+self.h2,  z+self.h2, self.r, self.g, self.b, 0,0,1,
+
+        # Z-
+            x-self.h2, y-self.h2, z-self.h2, self.r, self.g, self.b, 0,0,-1,
+            x+self.h2, y-self.h2, z-self.h2, self.r, self.g, self.b, 0,0,-1,
+            x+self.h2, y+self.h2, z-self.h2, self.r, self.g, self.b, 0,0,-1,
+            x-self.h2, y+self.h2, z-self.h2, self.r, self.g, self.b, 0,0,-1,
+            
+        # X+
+            x+self.h2, y-self.h2, z-self.h2, self.r, self.g, self.b, 1,0,0,
+            x+self.h2, y+self.h2, z-self.h2, self.r, self.g, self.b, 1,0,0,
+            x+self.h2, y+self.h2, z+self.h2, self.r, self.g, self.b, 1,0,0,
+            x+self.h2, y-self.h2, z+self.h2, self.r, self.g, self.b, 1,0,0,
+    
+        # X-
+            x-self.h2, y-self.h2, z-self.h2, self.r, self.g, self.b, -1,0,0,
+            x-self.h2, y+self.h2, z-self.h2, self.r, self.g, self.b, -1,0,0,
+            x-self.h2, y+self.h2, z+self.h2, self.r, self.g, self.b, -1,0,0,
+            x-self.h2, y-self.h2, z+self.h2, self.r, self.g, self.b, -1,0,0,
+
+        # Y+
+            x-self.h2, y+self.h2, z-self.h2, self.r, self.g, self.b, 0,1,0,
+            x+self.h2, y+self.h2, z-self.h2, self.r, self.g, self.b, 0,1,0,
+            x+self.h2, y+self.h2, z+self.h2, self.r, self.g, self.b, 0,1,0,
+            x-self.h2, y+self.h2, z+self.h2, self.r, self.g, self.b, 0,1,0,
+
+        # Y-
+            x-self.h2, y-self.h2, z-self.h2, self.r, self.g, self.b, 0,-1,0,
+            x+self.h2, y-self.h2, z-self.h2, self.r, self.g, self.b, 0,-1,0,
+            x+self.h2, y-self.h2, z+self.h2, self.r, self.g, self.b, 0,-1,0,
+            x-self.h2, y-self.h2, z+self.h2, self.r, self.g, self.b, 0,-1,0
+            ]
+
+        # Defining connections among vertices
+        # We have a triangle every 3 indices specified
+        indices = np.array([
+            0, 1, 2, 2, 3, 0, # Z+
+            7, 6, 5, 5, 4, 7, # Z-
+            8, 9,10,10,11, 8, # X+
+            15,14,13,13,12,15, # X-
+            19,18,17,17,16,19, # Y+
+            20,21,22,22,23,20]) # Y-
+        return vertices, indices
+
+    def add_voxel(self, x,y,z):
+        vox_vert, vox_ind = self._get_voxel(x,y,z)
+        self.vertices.extend(vox_vert)
+        self.indices.extend((vox_ind + 24*self.vox_count).tolist())
+        self.vox_count +=1
+
+    def to_shape(self):
+        return bs.Shape(self.vertices, self.indices)
+
+
+def find_voxel_volumes(space, Ta,Tb,Tc, voxel_a_color, voxel_b_color, voxel_c_color):
+    global h
+    volumeA = VoxelVolume(voxel_size=h, color=voxAcolor)
+    volumeB = VoxelVolume(voxel_size=h, color=voxBcolor)
+    volumeC = VoxelVolume(voxel_size=h, color=voxCcolor)
     ta_1, ta_2 = Ta-2, Ta+2
     tb_1, tb_2 = Tb-2, Tb+2
     tc_1, tc_2 = Tc-2, Tc+2
@@ -97,23 +167,27 @@ def find_voxel_volumes(space, Ta,Tb,Tc, voxel_a, voxel_b, voxel_c):
             for k in range(1, space.shape[2]-1):
                 # Find fish A area
                 if ta_1 <= space[i,j,k] <= ta_2:
-                    vox = sg.SceneGraphNode("vox_a_{}_{}_{}".format(i,j,k))
-                    vox.childs = [voxel_a]
-                    vox.transform = tr.translate(i*h, j*h, k*h)
-                    volumeA.childs.append(vox)
+                    volumeA.add_voxel(i*h, j*h, k*h)
                 # Find fish B area
                 elif tb_1 <= space[i,j,k] <= tb_2:
-                    vox = sg.SceneGraphNode("vox_b_{}_{}_{}".format(i,j,k))
-                    vox.childs = [voxel_b]
-                    vox.transform = tr.translate(i*h, j*h, k*h)
-                    volumeB.childs.append(vox)
+                    volumeB.add_voxel(i*h, j*h, k*h)
                 # Find fish C area
                 elif tc_1 <= space[i,j,k] <= tc_2:
-                    vox = sg.SceneGraphNode("vox_c_{}_{}_{}".format(i,j,k))
-                    vox.childs = [voxel_c]
-                    vox.transform = tr.translate(i*h, j*h, k*h)
-                    volumeC.childs.append(vox)
-    return volumeA, volumeB, volumeC
+                    volumeC.add_voxel(i*h, j*h, k*h)
+
+    volumeA_scene = sg.SceneGraphNode("Fish_A_volume")
+    vol_a_shape = volumeA.to_shape()
+    volumeA_scene.childs = [es.toGPUShape(vol_a_shape)]
+
+    volumeB_scene = sg.SceneGraphNode("Fish_A_volume")
+    vol_b_shape = volumeB.to_shape()
+    volumeB_scene.childs = [es.toGPUShape(vol_b_shape)]
+
+    volumeC_scene = sg.SceneGraphNode("Fish_A_volume")
+    vol_c_shape = volumeC.to_shape()
+    volumeC_scene.childs = [es.toGPUShape(vol_c_shape)]
+
+    return volumeA_scene, volumeB_scene, volumeC_scene
 
 def createAquarium(width, lenght, height, r,g,b):
     w2 = width/2
@@ -176,9 +250,9 @@ if __name__ == "__main__":
     print(config)
 
     aq_space = np.load(config["filename"])
-    aq_width = aq_space.shape[0] * h
-    aq_lenght = aq_space.shape[1] * h
-    aq_height = aq_space.shape[2] * h
+    aq_width  = (aq_space.shape[0]-1) * h
+    aq_lenght = (aq_space.shape[1]-1) * h
+    aq_height = (aq_space.shape[2]-1) * h
 
     # Initialize glfw
     if not glfw.init():
@@ -214,22 +288,14 @@ if __name__ == "__main__":
     gpuAxis = es.toGPUShape(bs.createAxis(7))
 
     # Define fish areas
-    gpuVoxelA = es.toGPUShape(bs.createColorNormalsCube(1,0,0))
-    voxA = sg.SceneGraphNode("vox_a")
-    voxA.childs = [gpuVoxelA]
-    voxA.transform = tr.uniformScale(h)
+    voxAcolor = (1,0,0)
+    voxBcolor = (0,1,0)
+    voxCcolor = (0,0,1)
 
-    gpuVoxelB = es.toGPUShape(bs.createColorNormalsCube(0,1,0))
-    voxB = sg.SceneGraphNode("vox_b")
-    voxB.childs = [gpuVoxelB]
-    voxB.transform = tr.uniformScale(h)
+    fish_volumes = find_voxel_volumes(aq_space, config['t_a'],config['t_b'],config['t_c'],voxAcolor, voxBcolor, voxCcolor)
 
-    gpuVoxelC = es.toGPUShape(bs.createColorNormalsCube(0,0,1))
-    voxC = sg.SceneGraphNode("vox_c")
-    voxC.childs = [gpuVoxelC]
-    voxC.transform = tr.uniformScale(h)
-
-    fish_volumes = find_voxel_volumes(aq_space, config['t_a'],config['t_b'],config['t_c'],voxA, voxB, voxC)
+    vols = VoxelVolume(h, (1,1,0))
+    vols.add_voxel(0,0,0)
 
     # Create aquarium
     gpuAq = es.toGPUShape(createAquarium(aq_width, aq_lenght, aq_height,0,0,0))
