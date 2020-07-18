@@ -91,7 +91,7 @@ if __name__ == "__main__":
         config = json.load(setup_file)
     print(config)
 
-    h = 0.1
+    h = 0.2
     print("Solving wuth h = {}".format(h))
     n_width = round(config['width']/h)
     n_lenght = round(config['lenght']/h)
