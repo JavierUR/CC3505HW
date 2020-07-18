@@ -115,6 +115,45 @@ def find_voxel_volumes(space, Ta,Tb,Tc, voxel_a, voxel_b, voxel_c):
                     volumeC.childs.append(vox)
     return volumeA, volumeB, volumeC
 
+def createAquarium(width, lenght, height, r,g,b):
+    w2 = width/2
+    l2 = lenght/2
+    # Defining the location and colors of each vertex  of the shape
+    vertices = [
+    #    positions        colors
+        # Z-
+        -w2,  -l2,   0.0, r, g, b,
+         w2,  -l2,   0.0, r, g, b,
+         w2,   l2,   0.0, r, g, b,
+        -w2,   l2,   0.0, r, g, b,
+        # Z+
+        -w2,  -l2,   height, r, g, b,
+         w2,  -l2,   height, r, g, b,
+         w2,   l2,   height, r, g, b,
+        -w2,   l2,   height, r, g, b,
+        ]
+
+    # This shape is meant to be drawn with GL_LINES,
+    # i.e. every 2 indices, we have 1 line.
+    indices = [
+         # Z-
+         0, 1,
+         1, 2,
+         2, 3,
+         3, 0,
+         # Z+
+         4, 5,
+         5, 6,
+         6, 7,
+         7, 4,
+         # sides
+         0, 4,
+         1, 5,
+         2, 6,
+         3, 7
+         ]
+
+    return bs.Shape(vertices, indices)
 
 if __name__ == "__main__":
     # Parse arguments
@@ -192,12 +231,8 @@ if __name__ == "__main__":
 
     fish_volumes = find_voxel_volumes(aq_space, config['t_a'],config['t_b'],config['t_c'],voxA, voxB, voxC)
 
-    # testvox = sg.SceneGraphNode("testvox")
-    # testvox.childs = [voxA]
-    # testvox.transform = tr.translate(1*h,1*h,1*h)
-
-    # volumeA = sg.SceneGraphNode("Vollume_A")
-    # volumeA.childs = [testvox]
+    # Create aquarium
+    gpuAq = es.toGPUShape(createAquarium(aq_width, aq_lenght, aq_height,0,0,0))
     
     scene = sg.SceneGraphNode("Aquarium")
     scene.childs = [fish_volumes[controller.showVolume]]
@@ -244,11 +279,12 @@ if __name__ == "__main__":
         else:
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
+        glUseProgram(mvpPipeline.shaderProgram)
+        glUniformMatrix4fv(glGetUniformLocation(mvpPipeline.shaderProgram, "projection"), 1, GL_TRUE, projection)
+        glUniformMatrix4fv(glGetUniformLocation(mvpPipeline.shaderProgram, "view"), 1, GL_TRUE, view)
+        glUniformMatrix4fv(glGetUniformLocation(mvpPipeline.shaderProgram, "model"), 1, GL_TRUE, tr.identity())
+        mvpPipeline.drawShape(gpuAq, GL_LINES)
         if controller.showAxis:
-            glUseProgram(mvpPipeline.shaderProgram)
-            glUniformMatrix4fv(glGetUniformLocation(mvpPipeline.shaderProgram, "projection"), 1, GL_TRUE, projection)
-            glUniformMatrix4fv(glGetUniformLocation(mvpPipeline.shaderProgram, "view"), 1, GL_TRUE, view)
-            glUniformMatrix4fv(glGetUniformLocation(mvpPipeline.shaderProgram, "model"), 1, GL_TRUE, tr.identity())
             mvpPipeline.drawShape(gpuAxis, GL_LINES)
 
         # Draw aquarium
@@ -261,8 +297,8 @@ if __name__ == "__main__":
 
         # Object is barely visible at only ambient. Diffuse behavior is slightly red. Sparkles are white
         glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Ka"), 0.3, 0.3, 0.3)
-        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Kd"), 0.9, 0.5, 0.5)
-        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Ks"), 0.05, 0.05, 0.05)
+        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Kd"), 0.9, 0.9, 0.9)
+        glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "Ks"), 1., 1., 1.)
 
         glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "lightPosition"), -5, -5, 5)
         glUniform3f(glGetUniformLocation(phongPipeline.shaderProgram, "viewPosition"), viewPos[0], viewPos[1], viewPos[2])
