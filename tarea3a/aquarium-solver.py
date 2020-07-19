@@ -15,6 +15,9 @@ B_WALL    = 4
 B_BOTTOM  = 5
 
 def get_left_type(m,n,l):
+    # Function get the type of the left border point
+    # m,n,l - Point coordinates
+    # return - Point type
     global bottom_mask
     if m >=0: # Inside point
         if l > 0: 
@@ -25,6 +28,9 @@ def get_left_type(m,n,l):
         return B_WALL
 
 def get_right_type(m,n,l):
+     # Function get the type of the right border point
+    # m,n,l - Point coordinates
+    # return - Point type
     global bottom_mask, n_lenght
     if m < n_width: # Inside point
         if l > 0: 
@@ -35,6 +41,9 @@ def get_right_type(m,n,l):
         return B_WALL
 
 def get_up_type(m,n,l):
+     # Function get the type of the up border point
+    # m,n,l - Point coordinates
+    # return - Point type
     global n_height
     if l < (n_height-1): # Inside point
         return NORMAL
@@ -42,6 +51,9 @@ def get_up_type(m,n,l):
         return B_AMBIENT
 
 def get_down_type(m,n,l):
+     # Function get the type of the down border point
+    # m,n,l - Point coordinates
+    # return - Point type
     global bottom_mask, n_lenght
     if l >0: # Inside point
         return NORMAL
@@ -52,6 +64,9 @@ def get_down_type(m,n,l):
             return B_BOTTOM
 
 def get_front_type(m,n,l):
+     # Function get the type of the front border point
+    # m,n,l - Point coordinates
+    # return - Point type
     global bottom_mask, n_lenght
     if n < n_lenght: # Inside point
         if l > 0: 
@@ -62,6 +77,9 @@ def get_front_type(m,n,l):
         return B_WALL
 
 def get_back_type(m,n,l):
+     # Function get the type of the back border point
+    # m,n,l - Point coordinates
+    # return - Point type
     global bottom_mask, n_lenght
     if n >= 0: # Inside point
         if l > 0: 
@@ -215,5 +233,6 @@ if __name__ == "__main__":
     space[n_1:n_2,nb_1:nb_2,0] = config['heater_b']
     space[:,:,-1] = config['ambient_temperature']
 
+    # Save results
     np.save(config['filename'],space)
     

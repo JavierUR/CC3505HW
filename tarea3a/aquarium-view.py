@@ -85,8 +85,11 @@ def on_key(window, key, scancode, action, mods):
     else:
         print('Unknown key')
 
+# A class to manage a voxel volume
 class VoxelVolume(object):
     def __init__(self, voxel_size, color):
+        # voxel_size - side size of voxels
+        # color - (r,g,b) color of the voxels
         self.h2 = voxel_size/2
         self.r = color[0]
         self.g = color[1]
@@ -97,6 +100,9 @@ class VoxelVolume(object):
         self.volume_samples = []
 
     def _get_voxel(self, x, y, z):
+        # Method to calculate voxel vertices and indices
+        # x,y,z - Position of the voxel
+        # return - voxel shape vertices and indices
         # Defining the location and colors of each vertex  of the shape
         vertices = [
         #   positions         colors   normals
@@ -149,6 +155,8 @@ class VoxelVolume(object):
         return vertices, indices
 
     def add_voxel(self, x,y,z):
+        # Method to add a voxel to the volume
+        # x,y,z - Position of the voxel
         self.volume_samples.append((x,y,z))
         vox_vert, vox_ind = self._get_voxel(x,y,z)
         self.vertices.extend(vox_vert)
@@ -156,9 +164,14 @@ class VoxelVolume(object):
         self.vox_count +=1
 
     def to_shape(self):
+        # Method to return volume as Shape
+        # return - Shape of the voxel volume
         return bs.Shape(self.vertices, self.indices)
 
     def get_samples(self, n):
+        # Method to get sample points from the voxel volume
+        # n - Number of samples
+        # return - List of points
         sample_i = np.random.choice(len(self.volume_samples),n, replace=False)
         points = [self.volume_samples[i] for i in sample_i]
         return points
@@ -167,6 +180,11 @@ class VoxelVolume(object):
 
 
 def find_voxel_volumes(space, Ta,Tb,Tc, voxel_a_color, voxel_b_color, voxel_c_color):
+    # Function to find the vvoxel volumes preferred by the three fish
+    # Ta, Tb, Tc - Temperature preferred by fish A, B and C
+    # voxel_a_color - Color of the fish A region
+    # voxel_b_color - Color of the fish B region
+    # voxel_c_color - Color of the fish c region
     global h
     volumeA = VoxelVolume(voxel_size=h, color=voxAcolor)
     volumeB = VoxelVolume(voxel_size=h, color=voxBcolor)
@@ -191,6 +209,12 @@ def find_voxel_volumes(space, Ta,Tb,Tc, voxel_a_color, voxel_b_color, voxel_c_co
     return volumeA, volumeB, volumeC
 
 def createAquarium(width, lenght, height, r,g,b):
+    # Function to create the aquarium bounding box as lines
+    # width - Width of the aquarium
+    # lenght - Lenght of the aquarium
+    # height - Height of the aquarium
+    # r,g,b - Color of the lines
+    # return - Aquarium Shape
     w2 = width/2
     l2 = lenght/2
     h2 = height/2
@@ -251,6 +275,7 @@ if __name__ == "__main__":
         config = json.load(setup_file)
     print(config)
 
+    # Load aquarium solution
     aq_space = np.load(config["filename"])
     aq_width  = (aq_space.shape[0]-1) * h
     aq_lenght = (aq_space.shape[1]-1) * h
