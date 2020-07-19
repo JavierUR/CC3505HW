@@ -14,6 +14,8 @@ import basic_shapes as bs
 import easy_shaders as es
 import lighting_shaders as ls
 
+import fish_model as fm
+
 h=0.04
 
 HELP_TEXT = """
@@ -29,14 +31,16 @@ S: Zoom out
 class Controller:
     def __init__(self):
         self.fillPolygon = True
-        self.showAxis = True
+        self.showAxis = False
         self.up = False
         self.down = False
         self.right = False
         self.left = False
         self.zoomIn = False
         self.zoomOut = False
-        self.showVolume = 0
+        self.showVolumeA = False
+        self.showVolumeB = False
+        self.showVolumeC = False
 
 
 # we will use the global controller as communication with the callback function
@@ -59,13 +63,13 @@ def on_key(window, key, scancode, action, mods):
         controller.zoomOut = (action == glfw.PRESS or action == glfw.REPEAT)
     elif key == glfw.KEY_A:
         if action == glfw.PRESS:
-            controller.showVolume = 0
+            controller.showVolumeA = not controller.showVolumeA
     elif key == glfw.KEY_B:
         if action == glfw.PRESS:
-            controller.showVolume = 1
+            controller.showVolumeB = not controller.showVolumeB
     elif key == glfw.KEY_C:
         if action == glfw.PRESS:
-            controller.showVolume = 2
+            controller.showVolumeC = not controller.showVolumeC
     
     elif key == glfw.KEY_SPACE:
         if action == glfw.PRESS:
@@ -90,6 +94,7 @@ class VoxelVolume(object):
         self.vertices = []
         self.indices = []
         self.vox_count = 0
+        self.volume_samples = []
 
     def _get_voxel(self, x, y, z):
         # Defining the location and colors of each vertex  of the shape
@@ -144,6 +149,7 @@ class VoxelVolume(object):
         return vertices, indices
 
     def add_voxel(self, x,y,z):
+        self.volume_samples.append((x,y,z))
         vox_vert, vox_ind = self._get_voxel(x,y,z)
         self.vertices.extend(vox_vert)
         self.indices.extend((vox_ind + 24*self.vox_count).tolist())
@@ -151,6 +157,13 @@ class VoxelVolume(object):
 
     def to_shape(self):
         return bs.Shape(self.vertices, self.indices)
+
+    def get_samples(self, n):
+        sample_i = np.random.choice(len(self.volume_samples),n, replace=False)
+        points = [self.volume_samples[i] for i in sample_i]
+        return points
+
+        
 
 
 def find_voxel_volumes(space, Ta,Tb,Tc, voxel_a_color, voxel_b_color, voxel_c_color):
@@ -175,36 +188,25 @@ def find_voxel_volumes(space, Ta,Tb,Tc, voxel_a_color, voxel_b_color, voxel_c_co
                 elif tc_1 <= space[i,j,k] <= tc_2:
                     volumeC.add_voxel(i*h, j*h, k*h)
 
-    volumeA_scene = sg.SceneGraphNode("Fish_A_volume")
-    vol_a_shape = volumeA.to_shape()
-    volumeA_scene.childs = [es.toGPUShape(vol_a_shape)]
-
-    volumeB_scene = sg.SceneGraphNode("Fish_A_volume")
-    vol_b_shape = volumeB.to_shape()
-    volumeB_scene.childs = [es.toGPUShape(vol_b_shape)]
-
-    volumeC_scene = sg.SceneGraphNode("Fish_A_volume")
-    vol_c_shape = volumeC.to_shape()
-    volumeC_scene.childs = [es.toGPUShape(vol_c_shape)]
-
-    return volumeA_scene, volumeB_scene, volumeC_scene
+    return volumeA, volumeB, volumeC
 
 def createAquarium(width, lenght, height, r,g,b):
     w2 = width/2
     l2 = lenght/2
+    h2 = height/2
     # Defining the location and colors of each vertex  of the shape
     vertices = [
     #    positions        colors
         # Z-
-        -w2,  -l2,   0.0, r, g, b,
-         w2,  -l2,   0.0, r, g, b,
-         w2,   l2,   0.0, r, g, b,
-        -w2,   l2,   0.0, r, g, b,
+        -w2,  -l2,   -h2, r, g, b,
+         w2,  -l2,   -h2, r, g, b,
+         w2,   l2,   -h2, r, g, b,
+        -w2,   l2,   -h2, r, g, b,
         # Z+
-        -w2,  -l2,   height, r, g, b,
-         w2,  -l2,   height, r, g, b,
-         w2,   l2,   height, r, g, b,
-        -w2,   l2,   height, r, g, b,
+        -w2,  -l2,   h2, r, g, b,
+         w2,  -l2,   h2, r, g, b,
+         w2,   l2,   h2, r, g, b,
+        -w2,   l2,   h2, r, g, b,
         ]
 
     # This shape is meant to be drawn with GL_LINES,
@@ -289,20 +291,65 @@ if __name__ == "__main__":
 
     # Define fish areas
     voxAcolor = (1,0,0)
-    voxBcolor = (0,1,0)
-    voxCcolor = (0,0,1)
+    voxBcolor = (0,0,1)
+    voxCcolor = (1,0,0)
 
     fish_volumes = find_voxel_volumes(aq_space, config['t_a'],config['t_b'],config['t_c'],voxAcolor, voxBcolor, voxCcolor)
 
-    vols = VoxelVolume(h, (1,1,0))
-    vols.add_voxel(0,0,0)
+    
+    volumeA_scene = sg.SceneGraphNode("Fish_A_volume")
+    vol_a_shape = fish_volumes[0].to_shape()
+    volumeA_scene.childs = [es.toGPUShape(vol_a_shape)]
+
+    volumeB_scene = sg.SceneGraphNode("Fish_B_volume")
+    vol_b_shape = fish_volumes[1].to_shape()
+    volumeB_scene.childs = [es.toGPUShape(vol_b_shape)]
+
+    volumeC_scene = sg.SceneGraphNode("Fish_C_volume")
+    vol_c_shape = fish_volumes[2].to_shape()
+    volumeC_scene.childs = [es.toGPUShape(vol_c_shape)]
+
 
     # Create aquarium
     gpuAq = es.toGPUShape(createAquarium(aq_width, aq_lenght, aq_height,0,0,0))
     
     scene = sg.SceneGraphNode("Aquarium")
-    scene.childs = [fish_volumes[controller.showVolume]]
-    scene.transform = tr.translate(-aq_width/2, -aq_lenght/2,0)
+    scene.transform = tr.translate(-aq_width/2, -aq_lenght/2, -aq_height/2)
+
+    # Create fish
+
+    bodyA, finA, finbodytrA = fm.make_fish(4./1, 1.,0.1, 0.5, 0.5, 0.5)
+    gpubodyA = es.toGPUShape(bodyA)
+    gpuFinA = es.toGPUShape(finA)
+
+    bodyB, finB, finbodytrB = fm.make_fish(1./1.8, 1./4,0.02, 0.5, 0.5, 0.8)
+    gpubodyB = es.toGPUShape(bodyB)
+    gpuFinB = es.toGPUShape(finB)
+
+    bodyC, finC, finbodytrC = fm.make_fish(4./1, 1/2,0.1, 0.8, 0.5, 0.5)
+    gpubodyC = es.toGPUShape(bodyC)
+    gpuFinC = es.toGPUShape(finC)
+
+    fish = []
+    # Add type A fish
+    samples = fish_volumes[0].get_samples(config['n_a'])
+    for p in samples:
+        pos = tr.matmul([tr.translate(*p),tr.rotationZ(2*np.pi*np.random.random())])
+        fish.append(fm.Fish(4, gpubodyA, gpuFinA, finbodytrA, pos))
+    # Add type B fish
+    samples = fish_volumes[1].get_samples(config['n_b'])
+    for p in samples:
+        pos = tr.matmul([tr.translate(*p),tr.rotationZ(2*np.pi*np.random.random())])
+        fish.append(fm.Fish(6, gpubodyB, gpuFinB, finbodytrB, pos))
+    # Add type C fish
+    samples = fish_volumes[2].get_samples(config['n_c'])
+    for p in samples:
+        pos = tr.matmul([tr.translate(*p),tr.rotationZ(2*np.pi*np.random.random())])
+        fish.append(fm.Fish(1.8, gpubodyC, gpuFinC, finbodytrC, pos))
+
+    fish_scene = sg.SceneGraphNode("aquarium_fish")
+    fish_scene.childs = [f.fishScene for f in fish]
+    fish_scene.transform = tr.translate(-aq_width/2, -aq_lenght/2, -aq_height/2)
 
     # Using the same view and projection matrices in the whole application
     projection = tr.perspective(45, float(width)/float(height), 0.1, 100)
@@ -320,7 +367,7 @@ if __name__ == "__main__":
         ltime = time
         camera_theta -= 2.0*dt*(controller.right - controller.left)
         camera_phi -= 2.0*dt*(controller.up - controller.down)
-        camera_phi = np.clip(camera_phi, 0+0.00001, np.pi/2) # view matrix is NaN when phi=0
+        camera_phi = np.clip(camera_phi, 0+0.00001, np.pi-0.00001) # view matrix is NaN when phi=0
         camera_r += 2.0*dt*(controller.zoomOut - controller.zoomIn)
         camera_r = np.clip(camera_r, 0.7, 4)
 
@@ -352,6 +399,10 @@ if __name__ == "__main__":
         mvpPipeline.drawShape(gpuAq, GL_LINES)
         if controller.showAxis:
             mvpPipeline.drawShape(gpuAxis, GL_LINES)
+        # Draw fish
+        for f in fish:
+            f.update(time)
+        sg.drawSceneGraphNode(fish_scene, mvpPipeline,"model")
 
         # Draw aquarium
         glUseProgram(phongPipeline.shaderProgram)
@@ -378,7 +429,9 @@ if __name__ == "__main__":
         glUniformMatrix4fv(glGetUniformLocation(phongPipeline.shaderProgram, "view"), 1, GL_TRUE, view)
         
         # Volume to show
-        scene.childs = [fish_volumes[controller.showVolume]]
+        scene.childs =  [volumeA_scene]*controller.showVolumeA + \
+                        [volumeB_scene]*controller.showVolumeB + \
+                        [volumeC_scene]*controller.showVolumeC 
         sg.drawSceneGraphNode(scene, phongPipeline, "model")
 
         # Once the render is done, buffers are swapped, showing only the complete scene.
