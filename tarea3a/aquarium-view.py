@@ -290,9 +290,9 @@ if __name__ == "__main__":
     gpuAxis = es.toGPUShape(bs.createAxis(7))
 
     # Define fish areas
-    voxAcolor = (1,0,0)
-    voxBcolor = (0,0,1)
-    voxCcolor = (1,0,0)
+    voxAcolor = (0.564,0.682,0.815)
+    voxBcolor = (0.407,0.298,0.921)
+    voxCcolor = (0.768,0.372,0.337)
 
     fish_volumes = find_voxel_volumes(aq_space, config['t_a'],config['t_b'],config['t_c'],voxAcolor, voxBcolor, voxCcolor)
 
@@ -318,15 +318,15 @@ if __name__ == "__main__":
 
     # Create fish
 
-    bodyA, finA, finbodytrA = fm.make_fish(4./1, 1.,0.1, 0.5, 0.5, 0.5)
+    bodyA, finA, finbodytrA = fm.make_fish(4./1, 1.,0.1, voxAcolor[0], voxAcolor[1], voxAcolor[2])
     gpubodyA = es.toGPUShape(bodyA)
     gpuFinA = es.toGPUShape(finA)
 
-    bodyB, finB, finbodytrB = fm.make_fish(1./1.8, 1./4,0.02, 0.5, 0.5, 0.8)
+    bodyB, finB, finbodytrB = fm.make_fish(1./1.8, 1./4,0.02, voxBcolor[0], voxBcolor[1], voxBcolor[2])
     gpubodyB = es.toGPUShape(bodyB)
     gpuFinB = es.toGPUShape(finB)
 
-    bodyC, finC, finbodytrC = fm.make_fish(4./1, 1/2,0.1, 0.8, 0.5, 0.5)
+    bodyC, finC, finbodytrC = fm.make_fish(4./1, 1/2,0.1, voxCcolor[0], voxCcolor[1], voxCcolor[2])
     gpubodyC = es.toGPUShape(bodyC)
     gpuFinC = es.toGPUShape(finC)
 
@@ -335,7 +335,7 @@ if __name__ == "__main__":
     samples = fish_volumes[0].get_samples(config['n_a'])
     for p in samples:
         pos = tr.matmul([tr.translate(*p),tr.rotationZ(2*np.pi*np.random.random())])
-        fish.append(fm.Fish(4, gpubodyA, gpuFinA, finbodytrA, pos))
+        fish.append(fm.Fish(3, gpubodyA, gpuFinA, finbodytrA, pos))
     # Add type B fish
     samples = fish_volumes[1].get_samples(config['n_b'])
     for p in samples:
