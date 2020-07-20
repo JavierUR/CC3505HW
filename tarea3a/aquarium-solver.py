@@ -93,7 +93,7 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description='Aquarium Solver.')
     parser.add_argument('filename', metavar='Setup_File', type=str,
-                    help='(string) Name of the problem setup file')
+                    help='(string) Name of the problem json setup file')
     args = parser.parse_args()
     """ Load json parameters
         height:              Aquarium height [m]

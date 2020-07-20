@@ -200,10 +200,10 @@ def find_voxel_volumes(space, Ta,Tb,Tc, voxel_a_color, voxel_b_color, voxel_c_co
                 if ta_1 <= space[i,j,k] <= ta_2:
                     volumeA.add_voxel(i*h, j*h, k*h)
                 # Find fish B area
-                elif tb_1 <= space[i,j,k] <= tb_2:
+                if tb_1 <= space[i,j,k] <= tb_2:
                     volumeB.add_voxel(i*h, j*h, k*h)
                 # Find fish C area
-                elif tc_1 <= space[i,j,k] <= tc_2:
+                if tc_1 <= space[i,j,k] <= tc_2:
                     volumeC.add_voxel(i*h, j*h, k*h)
 
     return volumeA, volumeB, volumeC
