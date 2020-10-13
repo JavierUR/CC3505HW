@@ -6,6 +6,34 @@ import matplotlib.pyplot as plt
 from scipy.sparse import dok_matrix
 from scipy.sparse.linalg import spsolve
 
+import tracemalloc
+import linecache
+
+def display_top(snapshot, key_type='lineno', limit=10):
+    snapshot = snapshot.filter_traces((
+        tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+        tracemalloc.Filter(False, "<unknown>"),
+    ))
+    top_stats = snapshot.statistics(key_type)
+
+    print("Top %s lines" % limit)
+    for index, stat in enumerate(top_stats[:limit], 1):
+        frame = stat.traceback[0]
+        print("#%s: %s:%s: %.1f KiB"
+              % (index, frame.filename, frame.lineno, stat.size / 1024))
+        line = linecache.getline(frame.filename, frame.lineno).strip()
+        if line:
+            print('    %s' % line)
+
+    other = top_stats[limit:]
+    if other:
+        size = sum(stat.size for stat in other)
+        print("%s other: %.1f KiB" % (len(other), size / 1024))
+    total = sum(stat.size for stat in top_stats)
+    print("Total allocated size: %.1f KiB" % (total / 1024))
+
+tracemalloc.start()
+
 # Point types
 NORMAL    = 0
 B_HEAT_A  = 1
@@ -31,7 +59,7 @@ def get_right_type(m,n,l):
      # Function get the type of the right border point
     # m,n,l - Point coordinates
     # return - Point type
-    global bottom_mask, n_lenght
+    global bottom_mask, n_width
     if m < n_width: # Inside point
         if l > 0: 
             return NORMAL
@@ -89,12 +117,12 @@ def get_back_type(m,n,l):
     else: # Outside point
         return B_WALL
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Parse arguments
-    parser = argparse.ArgumentParser(description='Aquarium Solver.')
-    parser.add_argument('filename', metavar='Setup_File', type=str,
-                    help='(string) Name of the problem json setup file')
-    args = parser.parse_args()
+    #parser = argparse.ArgumentParser(description='Aquarium Solver.')
+    #parser.add_argument('filename', metavar='Setup_File', type=str,
+    #                help='(string) Name of the problem json setup file')
+    #args = parser.parse_args()
     """ Load json parameters
         height:              Aquarium height [m]
         width:               Aquarium width [m]
@@ -105,12 +133,13 @@ if __name__ == "__main__":
         ambient_temperature: Ambient temperature of the aquarium [°C]
         filename:            file to save results 
     """
-    with open(args.filename, 'r') as setup_file:
+    filename = "problem-setup.json"
+    with open(filename, 'r') as setup_file:
         config = json.load(setup_file)
     print(config)
 
     h = 0.2
-    print("Solving wuth h = {}".format(h))
+    print("Solving with h = {}".format(h))
     n_width = round(config['width']/h)
     n_lenght = round(config['lenght']/h)
     n_height = round(config['height']/h)
@@ -138,6 +167,8 @@ if __name__ == "__main__":
     n_var = len(points)
     A = dok_matrix((n_var, n_var), dtype=np.float32)
     b = np.zeros(n_var)
+
+    snapshot1 = tracemalloc.take_snapshot()
 
     for p_index in range(n_var):
         i, j, k = points[p_index]
@@ -222,6 +253,15 @@ if __name__ == "__main__":
         elif b_type == B_HEAT_B: # Heater B - Dirichlet
             b[p_index]-= config['heater_b']
 
+    snapshot2 = tracemalloc.take_snapshot()
+    top_stats = snapshot2.compare_to(snapshot1, 'lineno')
+
+    print("[ Top 10 differences ]")
+    for stat in top_stats[:10]:
+        print(stat)
+
+    
+
     # Solve system
     A = A.tocsc()
     u = spsolve(A,b)
@@ -235,4 +275,7 @@ if __name__ == "__main__":
 
     # Save results
     np.save(config['filename'],space)
+
+    snapshot3 = tracemalloc.take_snapshot()
+    display_top(snapshot3)
     
